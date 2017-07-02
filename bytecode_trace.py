@@ -506,6 +506,7 @@ class AWDisasm():
         current = [codeblock.start, codeblock.end]
         continue
 
+      # FIX-ME: There's something bad going on here!!!
       if codeblock.start == current[1] or \
          codeblock.start == (current[1] + 1):
         current[1] = codeblock.end
