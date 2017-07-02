@@ -1,12 +1,15 @@
 #!/usr/bin/env python
 
-verbose = True
+verbose = False
 debug = True
+render_graph = False
 
 video_entries = []
 def log_video(x, y, zoom, address):
-  print ("VIDEO at 0x{} x={} y={} zoom={}\n".format(hex(address), x, y, zoom))
-  video_entries.push({
+  if verbose:
+    print ("VIDEO at 0x{} x={} y={} zoom={}\n".format(hex(address), x, y, zoom))
+
+  video_entries.append({
     'address': address,
     'x': x,
     'y': y,
@@ -210,7 +213,7 @@ class AWDisasm():
 
 
   def fetch(self):
-    value = ord(self.rom[self.level_bank << 16 | address])
+    value = ord(self.rom[self.level_bank << 16 | self.PC])
     if verbose:
       print (("Fetch at [{}] {}: {}").format(hex(self.level_bank),
                                              hex(self.PC),
@@ -229,25 +232,25 @@ class AWDisasm():
       return "video: off=0x%X x=%d y=%d" % (offset, x, y)
 
     elif opcode & 0x40 == 0x40: # VIDEO
-      offset = fetch()
+      offset = self.fetch()
       offset = ((offset << 8) | self.fetch()) * 2
 
       x_str = ""
-      x = fetch()
-      if !(opcode & 0x20):
-        if !(opcode & 0x10):
+      x = self.fetch()
+      if not (opcode & 0x20):
+        if not (opcode & 0x10):
           x = (x << 8) | self.fetch()
           x_str = "%d" % x
         else:
           x_str = "[0x%02x]" % x
-      else
+      else:
         if opcode & 0x10:
           x += 0x100
         x_str = "%d" % x
 
       y_str = ""
-      if !(opcode & 8):
-          if !(opcode & 4):
+      if not (opcode & 8):
+          if not (opcode & 4):
               y = self.fetch()
               y = (y << 8) | self.fetch()
               y_str = "%d" % y
@@ -257,8 +260,8 @@ class AWDisasm():
           y_str = "%d" % self.fetch()
 
       zoom_str = ""
-      if !(opcode & 2):
-        if !(opcode & 1):
+      if not (opcode & 2):
+        if not (opcode & 1):
           zoom_str = "0x40"
         else:
           zoom_str = "[0x%02x]" % self.fetch()
@@ -269,57 +272,57 @@ class AWDisasm():
           zoom_str = "[0x%02x]" % self.fetch()
 
       log_video(x_str, y_str, zoom_str, offset)
-      return "video: off=0x%X x=%s y=%s zoom:%s" % (off, x_str, y_str, zoom_str)
+      return "video: off=0x%X x=%s y=%s zoom:%s" % (offset, x_str, y_str, zoom_str)
 
-    elif opcode == 0x00 # movConst:
+    elif opcode == 0x00: # movConst
       dstVar = getVariableName(self.fetch())
       immediate = self.fetch()
       immediate = (immediate << 8) | self.fetch()
       return "mov [%s], 0x%04X" % (dstVar, immediate)
 
-    elif opcode == 0x01 # mov
+    elif opcode == 0x01: # mov
       dstVar = getVariableName(self.fetch())
       srcVar = getVariableName(self.fetch())
       return "mov [%s], [%s]" % (dstVar, srcVar)
 
-    elif opcode == 0x02 # add
+    elif opcode == 0x02: # add
       dstVar = getVariableName(self.fetch())
-      srcVar = getVariableName(srlf.fetch())
+      srcVar = getVariableName(self.fetch())
       return "add [%s], [%s]" % (dstVar, srcVar)
 
-    elif opcode == 0x03 # addConst
+    elif opcode == 0x03: # addConst
       dstVar = getVariableName(self.fetch())
       immediate = self.fetch()
       immediate = (immediate << 8) | self.fetch()
       return "add [%s], 0x%04X" % (dstVar, immediate)
 
-    elif opcode == 0x04 # call
+    elif opcode == 0x04: # call
       address = self.fetch()
       address = (address << 8) | self.fetch()
       self.subroutine(self.level_bank << 16 | address)
       return "call 0x%04X" % address
 
-    elif opcode == 0x05 # ret
+    elif opcode == 0x05: # ret
       self.return_from_subroutine()
       return "ret"
 
-    elif opcode == 0x06 # break
+    elif opcode == 0x06: # break
       return "break"
 
-    elif opcode == 0x07 # jmp
+    elif opcode == 0x07: # jmp
       address = self.fetch()
       address = (address << 8) | self.fetch()
       self.unconditional_jump(self.level_bank << 16 | address)
       return "jmp 0x%04X" % address
 
-    elif opcode == 0x08 # setVec
+    elif opcode == 0x08: # setVec
       threadId = self.fetch();
       pcOffsetRequested = self.fetch()
       pcOffsetRequested = (pcOffsetRequested << 8) | self.fetch()
       self.schedule_entry_point(self.level_bank << 16 | pcOffsetRequested)
       return "setvec channel:0x%02X, address:0x%04X" % (threadId, pcOffsetRequested)
 
-    elif opcode == 0x09 # djnz = Decrement and Jump if Not Zero
+    elif opcode == 0x09: # djnz = Decrement and Jump if Not Zero
       var = self.fetch();
       offset = self.fetch()
       offset = (offset << 8) | self.fetch()
@@ -327,7 +330,7 @@ class AWDisasm():
       self.conditional_branch(self.level_bank << 16 | offset)
       return "djnz [%s], 0x%04X" % (varName, offset)
 
-    elif opcode == 0x0a # Conditional Jump instructions
+    elif opcode == 0x0a: # Conditional Jump instructions
       subopcode = self.fetch()
       b = self.fetch()
       c = self.fetch()
@@ -364,16 +367,16 @@ class AWDisasm():
       else:
         return "< conditional jmp with invalid condition: %d >" % condition
 
-      line += "%s, %s, 0x%04X" % (prefix, midterm, offset)
-      self.conditional_branch(address)
+      line += ", %s, 0x%04X" % (midterm, offset)
+      self.conditional_branch(offset)
       return line
 
-    elif opcode == 0x0b # setPalette
+    elif opcode == 0x0b: # setPalette
       paletteId = self.fetch()
       paletteId = (paletteId << 8) | self.fetch()
       return "setPalette 0x%04X" % paletteId
 
-    elif opcode == 0x0c # freezeChannel
+    elif opcode == 0x0c: # freezeChannel
       first = self.fetch()
       last = self.fetch()
       type = self.fetch()
@@ -388,29 +391,29 @@ class AWDisasm():
       else:
         return "%s first:0x%02X, last:0x%02X" % (operation_names[type], first, last)
 
-    elif opcode == 0x0d # selectVideoPage
+    elif opcode == 0x0d: # selectVideoPage
       frameBufferId = self.fetch()
       return "selectVideoPage 0x%02X" % frameBufferId
 
-    elif opcode == 0x0e # fillVideoPage
+    elif opcode == 0x0e: # fillVideoPage
       pageId = self.fetch()
       color = self.fetch()
       return "fillVideoPage 0x%02X, color:0x%02X" % (pageId, color)
 
-    elif opcode == 0x0f # copyVideoPage
+    elif opcode == 0x0f: # copyVideoPage
       srcPageId = self.fetch()
       dstPageId = self.fetch()
       return "copyVideoPage src:0x%02X, dst:0x%02X" % (srcPageId, dstPageId)
 
-    elif opcode == 0x10 # blitFrameBuffer
+    elif opcode == 0x10: # blitFrameBuffer
       pageId = self.fetch()
       return "blitFramebuffer 0x%02X" % pageId
 
-    elif opcode == 0x11 # killChannel
+    elif opcode == 0x11: # killChannel
       self.return_from_subroutine()
       return "killChannel"
 
-    elif opcode == 0x12 # text
+    elif opcode == 0x12: # text
       stringId = self.fetch()
       stringId = (stringId << 8) | self.fetch()
       x = self.fetch()
@@ -418,38 +421,38 @@ class AWDisasm():
       color = self.fetch()
       return "text id:0x%04X, x:%d, y:%d, color:0x%02X" % (stringId, x, y, color)
 
-    elif opcode == 0x13 # sub
+    elif opcode == 0x13: # sub
       var1Str = getVariableName(self.fetch())
       var2Str = getVariableName(self.fetch())
       return "sub [%s], [%s]" % (var1Str, var2Str)
 
-    elif opcode == 0x14 # and
+    elif opcode == 0x14: # and
       dstVar = getVariableName(self.fetch())
       immediate = self.fetch()
       immediate = (immediate << 8) | self.fetch()
       return "and [%s], 0x%04X" % (dstVar, immediate)
 
-    elif opcode == 0x15 # or
+    elif opcode == 0x15: # or
       dstVar = getVariableName(self.fetch())
       immediate = self.fetch()
       immediate = (immediate << 8) | self.fetch()
       return "or [%s], 0x%04X" % (dstVar, immediate)
 
-    elif opcode == 0x16 # shift left
+    elif opcode == 0x16: # shift left
       variableId = self.fetch()
       leftShiftValue = self.fetch()
       leftShiftValue = (leftShiftValue << 8) | self.fetch()
       varStr = getVariableName(variableId)
       return "shl [%s], 0x%04X" % (varStr, leftShiftValue)
 
-    elif opcode == 0x17 # shift right
+    elif opcode == 0x17: # shift right
       variableId = self.fetch()
       rightShiftValue = self.fetch()
       rightShiftValue = (rightShiftValue << 8) | self.fetch()
       varStr = getVariableName(variableId)
       return "shr [%s], 0x%04X" % (varStr, rightShiftValue)
 
-    elif opcode == 0x18 # play
+    elif opcode == 0x18: # play
       resourceId = self.fetch()
       resourceId = (resourceId << 8) | self.fetch()
       freq = self.fetch()
@@ -457,14 +460,14 @@ class AWDisasm():
       channel = self.fetch()
       return "play id:0x%04X, freq:0x%02X, vol:0x%02X, channel:0x%02X" % (resourceId, freq, vol, channel)
 
-    elif opcode == 0x19 # load
+    elif opcode == 0x19: # load
       immediate = self.fetch()
       immediate = (immediate << 8) | self.fetch()
       if immediate > 0x91:
         self.return_from_subroutine()
       return "load id:0x%04X" % immediate
 
-    elif opcode == 0x1a # song
+    elif opcode == 0x1a: # song
       resNum = self.fetch()
       resNum = (resNum << 8) | self.fetch()
       delay = self.fetch()
@@ -473,7 +476,7 @@ class AWDisasm():
       return "song id:0x%04X, delay:0x%04X, pos:0x%02X" % (resNum, delay, pos)
 
     else:
-      ilegal_instruction()
+      return "ilegal_instruction!"
 
   def select_memory_bank(self, n):
     print("SELECT MEM-BANK {} !!! (PC={})".format(n, hex(self.PC)))
@@ -484,7 +487,8 @@ class AWDisasm():
     self.PC = entry_point
     while self.PC is not None:
       line = self.disasm_instruction()
-      print("[%02X] %04X: %s" % (self.level_bank, self.PC, line))
+      if self.PC:
+        print("[%02X] %04X: %s" % (self.level_bank, self.PC, line))
 
 
   def print_ranges(self):
@@ -494,15 +498,29 @@ class AWDisasm():
                                                    hex(codeblock.end)))
     print ("ranges:\n  " + "\n  ".join(results) + "\n")
 
-import sys
-if len(sys.argv) != 2:
-  print("usage: {} input.rom".format(sys.argv[0]))
-else:
-  gamerom = sys.argv[1]
-  awdis = AWDisasm(gamerom)
-  awdis.run()
-  awdis.print_ranges()
+  def print_grouped_ranges(self):
+    results = []
+    current = None
+    for codeblock in sorted(self.visited_ranges, key=lambda cb: cb.start):
+      if current == None:
+        current = [codeblock.start, codeblock.end]
+        continue
 
+      if codeblock.start == current[1] or \
+         codeblock.start == (current[1] + 1):
+        current[1] = codeblock.end
+        continue
+#      print (">>> codeblock.start: {} current[1]: {}\n".format(hex(codeblock.start),
+#                                                               hex(current[1])))
+
+      results.append("[start: {}, end: {}]".format(hex(current[0]),
+                                                   hex(current[1])))
+      current = [codeblock.start, codeblock.end]
+
+    print ("ranges:\n  " + "\n  ".join(results) + "\n")
+
+
+def generate_graph():
   def block_name(block):
     return "{}-{}".format(hex(block.start), hex(block.end))
 
@@ -534,3 +552,17 @@ else:
   #dot = Digraph(comment='The Round Table')
   #dot.render('test-output/round-table.gv', view=True)
 
+
+import sys
+if len(sys.argv) != 2:
+  print("usage: {} input.rom".format(sys.argv[0]))
+else:
+  gamerom = sys.argv[1]
+  awdis = AWDisasm(gamerom)
+  awdis.run()
+#  awdis.print_ranges()
+
+  if render_graph:
+    generate_graph()
+
+  awdis.print_grouped_ranges()
