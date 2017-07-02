@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 verbose = False
-debug = True
+debug = False
 render_graph = False
 
 video_entries = []
@@ -151,7 +151,7 @@ class AWDisasm():
 
   def return_from_subroutine(self):
     self.add_range(start=self.current_entry_point,
-                   end=self.PC,
+                   end=self.PC-1,
                    exit=[])
     if verbose:
       print("RETURN FROM SUBROUTINE")
@@ -200,9 +200,9 @@ class AWDisasm():
 
   def increment_PC(self):
     if self.already_visited(self.PC):
-      if debug:
-        print("ALREADY BEEN AT {}!".format(hex(self.PC)))
       if verbose:
+        print("ALREADY BEEN AT {}!".format(hex(self.PC)))
+      if debug:
         print("pending_entry_points: {}".format(self.pending_entry_points))
       self.add_range(start=self.current_entry_point,
                      end=self.PC-1,
@@ -214,7 +214,7 @@ class AWDisasm():
 
   def fetch(self):
     value = ord(self.rom[self.level_bank << 16 | self.PC])
-    if verbose:
+    if debug:
       print (("Fetch at [{}] {}: {}").format(hex(self.level_bank),
                                              hex(self.PC),
                                              hex(value)))
@@ -486,9 +486,9 @@ class AWDisasm():
     self.current_entry_point = entry_point
     self.PC = entry_point
     while self.PC is not None:
+      PC = self.PC
       line = self.disasm_instruction()
-      if self.PC:
-        print("[%02X] %04X: %s" % (self.level_bank, self.PC, line))
+      print("[%02X] %04X: %s" % (self.level_bank, PC, line))
 
 
   def print_ranges(self):
