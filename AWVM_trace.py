@@ -297,7 +297,7 @@ if len(sys.argv) != 2:
   print("usage: {} input.rom".format(sys.argv[0]))
 else:
   gamerom = sys.argv[1]
-  trace = AWVM_Trace(gamerom, verbose = False, debug = False, log_ranges = False)
+  trace = AWVM_Trace(gamerom, loglevel=0)
   trace.run()
 #  trace.print_ranges()
 #  trace.print_grouped_ranges()

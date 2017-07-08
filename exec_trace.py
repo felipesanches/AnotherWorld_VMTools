@@ -24,11 +24,13 @@ class CodeBlock():
     self.subroutines[instr_address] = routine_address
 
 
+ERROR = 0   # only critical messages
+VERBOSE = 1 # informative non-error msgs to the user
+DEBUG = 2   # debugging messages to the developer
+
 class ExecTrace():
-  def __init__(self, romfile, verbose=True, debug=True, log_ranges=False):
-    self.verbose = verbose
-    self.debug = debug
-    self.log_ranges = log_ranges
+  def __init__(self, romfile, loglevel=ERROR):
+    self.loglevel = loglevel
     self.rom = open(romfile).read()
     self.visited_ranges = []
     self.pending_entry_points = []
@@ -38,14 +40,12 @@ class ExecTrace():
   def already_visited(self, address):
     if self.PC is not None:
       if address >= self.current_entry_point and address < self.PC:
-        if self.debug:
-          print ("RECENTLY: (PC={} address={})".format(hex(self.PC), hex(address)))
+        self.log(DEBUG, "RECENTLY: (PC={} address={})".format(hex(self.PC), hex(address)))
         return True
 
     for codeblock in self.visited_ranges:
       if address >= codeblock.start and address <= codeblock.end:
-        if self.debug:
-          print ("ALREADY VISITED: {}".format(hex(address)))
+        self.log(DEBUG, "ALREADY VISITED: {}".format(hex(address)))
         if address > codeblock.start:
           # split the block into two:
           new_block = CodeBlock(start=codeblock.start,
@@ -70,23 +70,16 @@ class ExecTrace():
       address = self.pending_entry_points.pop()
       self.current_entry_point = address
       self.PC = address
-      if self.verbose:
-        print("Restarting from: {}".format(hex(address)))
+      self.log(VERBOSE, "Restarting from: {}".format(hex(address)))
 
   def add_range(self, start, end, exit=None):
     if end < start:
       self.add_range(end, start, exit)
       return
 
-    if self.debug:
-      print("=== New Range: start: {}  end: {} ===".format(hex(start), hex(end)))
+    self.log(DEBUG, "=== New Range: start: {}  end: {} ===".format(hex(start), hex(end)))
     block = CodeBlock(start, end, exit)
     self.visited_ranges.append(block)
-
-  def print_status(self):
-    print "Pending: {}".format(map(hex, self.pending_entry_points))
-    if self.log_ranges:
-      self.print_ranges()
 
   def schedule_entry_point(self, address):
     if self.already_visited(address):
@@ -94,9 +87,8 @@ class ExecTrace():
 
     if address not in self.pending_entry_points:
       self.pending_entry_points.append(address)
-      if self.verbose:
-        print "SCHEDULING: {}".format(hex(address))
-        self.print_status()
+      self.log(VERBOSE, "SCHEDULING: {}".format(hex(address)))
+      self.log_status()
 
   def subroutine(self, address):
     self.add_range(start=self.current_entry_point,
@@ -104,18 +96,17 @@ class ExecTrace():
                    exit=[self.PC, address])
     self.schedule_entry_point(self.PC)
     self.schedule_entry_point(address)
-    if self.verbose:
-      print "{}: CALL SUBROUTINE ({})".format(hex(self.PC-2), hex(address))
-      self.print_status()
+
+    self.log(VERBOSE, "{}: CALL SUBROUTINE ({})".format(hex(self.PC-2), hex(address)))
+    self.log_status()
     self.restart_from_another_entry_point()
 
   def return_from_subroutine(self):
     self.add_range(start=self.current_entry_point,
                    end=self.PC-1,
                    exit=[])
-    if self.verbose:
-      print("RETURN FROM SUBROUTINE")
-      self.print_status()
+    self.log(VERBOSE, "RETURN FROM SUBROUTINE")
+    self.log_status()
     self.restart_from_another_entry_point()
 
   def conditional_branch(self, address):
@@ -133,10 +124,9 @@ class ExecTrace():
                      exit=[self.PC, address])
       self.schedule_entry_point(self.PC)
       self.schedule_entry_point(address)
-    if self.verbose:
-      print ("CONDITIONAL JUMP to {}".format(hex(address)))
-      if self.log_ranges:
-        self.print_ranges()
+
+    self.log(VERBOSE, "CONDITIONAL JUMP to {}".format(hex(address)))
+    self.log_ranges()
     self.restart_from_another_entry_point()
 
   def unconditional_jump(self, address):
@@ -144,25 +134,22 @@ class ExecTrace():
                    end=self.PC-1,
                    exit=[address])
     self.schedule_entry_point(address)
-    if self.verbose:
-      print ("JUMP to {}".format(hex(address)))
-      if self.log_ranges:
-        self.print_ranges()
+
+    self.log(VERBOSE, "JUMP to {}".format(hex(address)))
+    self.log_ranges()
     self.restart_from_another_entry_point()
 
   def illegal_instruction(self, opcode):
     self.add_range(start=self.current_entry_point,
                    end=self.PC-1,
                    exit=["Illegal Opcode: {}".format(hex(opcode))])
-    print("[{}] ILLEGAL: {}".format(hex(self.PC-1), hex(opcode)))
+    self.log(ERROR, "[{}] ILLEGAL: {}".format(hex(self.PC-1), hex(opcode)))
     self.restart_from_another_entry_point()
 
   def increment_PC(self):
     if self.already_visited(self.PC):
-      if self.verbose:
-        print("ALREADY BEEN AT {}!".format(hex(self.PC)))
-      if self.debug:
-        print("pending_entry_points: {}".format(self.pending_entry_points))
+      self.log(VERBOSE, "ALREADY BEEN AT {}!".format(hex(self.PC)))
+      self.log(DEBUG, "pending_entry_points: {}".format(self.pending_entry_points))
       self.add_range(start=self.current_entry_point,
                      end=self.PC-1,
                      exit=[self.PC])
@@ -172,8 +159,7 @@ class ExecTrace():
 
   def fetch(self):
     value = ord(self.rom[self.PC])
-    if self.debug:
-      print (("Fetch at {}: {}").format(hex(self.PC), hex(value)))
+    self.log(DEBUG, "Fetch at {}: {}".format(hex(self.PC), hex(value)))
     self.increment_PC()
     return value
 
@@ -185,12 +171,21 @@ class ExecTrace():
       line = self.disasm_instruction()
       # print("%04X: %s" % (PC, line))
 
-  def print_ranges(self):
+####### LOGGING #######
+  def log(self, loglevel, msg):
+    if self.loglevel >= loglevel:
+      print(msg)
+
+  def log_status(self):
+    self.log(VERBOSE, "Pending: {}".format(map(hex, self.pending_entry_points)))
+
+  def log_ranges(self):
     results = []
     for codeblock in sorted(self.visited_ranges, key=lambda cb: cb.start):
       results.append("[start: {}, end: {}]".format(hex(codeblock.start),
                                                    hex(codeblock.end)))
-    print ("ranges:\n  " + "\n  ".join(results) + "\n")
+    self.log(DEBUG, "ranges:\n  " + "\n  ".join(results) + "\n")
+#######################
 
   def print_grouped_ranges(self):
     results = []
