@@ -1,13 +1,14 @@
 #!/usr/bin/env python
 
-verbose = False
-debug = False
+verbose = True
+debug = True
 render_graph = False
+log_ranges = False
 
 video_entries = []
 def log_video(x, y, zoom, address):
-  if verbose:
-    print ("VIDEO at 0x{} x={} y={} zoom={}\n".format(hex(address), x, y, zoom))
+#  if verbose:
+  print ("VIDEO at 0x{} x={} y={} zoom={}\n".format(hex(address), x, y, zoom))
 
   video_entries.append({
     'address': address,
@@ -15,6 +16,11 @@ def log_video(x, y, zoom, address):
     'y': y,
     'zoom': zoom
   })
+
+
+def print_video_entries():
+  for v in sorted(video_entries, key=lambda vid: vid['address']):
+    print "0x%04X x:%s y:%s zoom:%s" % (v['address'], v['x'], v['y'], v['zoom'])
 
 def getVariableName(value):
   if value == 0x3c: return "RANDOM_SEED"
@@ -123,7 +129,8 @@ class AWDisasm():
 
   def print_status(self):
     print "Pending: {}".format(map(hex, self.pending_entry_points))
-    self.print_ranges()
+    if log_ranges:
+      self.print_ranges()
 
 
   def schedule_entry_point(self, address):
@@ -176,7 +183,8 @@ class AWDisasm():
       self.schedule_entry_point(address)
     if verbose:
       print ("CONDITIONAL JUMP to {}".format(hex(address)))
-      self.print_ranges()
+      if log_ranges:
+        self.print_ranges()
     self.restart_from_another_entry_point()
 
 
@@ -187,7 +195,8 @@ class AWDisasm():
     self.schedule_entry_point(address)
     if verbose:
       print ("JUMP to {}".format(hex(address)))
-      self.print_ranges()
+      if log_ranges:
+        self.print_ranges()
     self.restart_from_another_entry_point()
 
   def illegal_instruction(self, opcode):
@@ -224,14 +233,14 @@ class AWDisasm():
   def disasm_instruction(self):
     opcode = self.fetch()
 
-    if opcode & 0x80 == 0x80:  # VIDEO
+    if (opcode & 0x80) == 0x80:  # VIDEO
       offset = ((opcode << 8) | self.fetch()) * 2
       x = self.fetch()
       y = self.fetch()
       log_video(x, y, "0x40" ,offset)
       return "video: off=0x%X x=%d y=%d" % (offset, x, y)
 
-    elif opcode & 0x40 == 0x40: # VIDEO
+    elif (opcode & 0x40) == 0x40: # VIDEO
       offset = self.fetch()
       offset = ((offset << 8) | self.fetch()) * 2
 
@@ -567,3 +576,6 @@ else:
     generate_graph()
 
   awdis.print_grouped_ranges()
+
+  print_video_entries()
+
