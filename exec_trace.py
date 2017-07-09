@@ -36,6 +36,7 @@ class ExecTrace():
     self.pending_entry_points = []
     self.current_entry_point = None
     self.PC = None
+    self.disasm = {}
 
   def already_visited(self, address):
     if self.PC is not None:
@@ -166,10 +167,12 @@ class ExecTrace():
   def run(self, entry_point=0x0000):
     self.current_entry_point = entry_point
     self.PC = entry_point
+    self.disasm[entry_point] = ""
+    indent = "%04X: " % entry_point
     while self.PC is not None:
-      PC = self.PC
       line = self.disasm_instruction()
-      # print("%04X: %s" % (PC, line))
+      self.disasm[entry_point] += "%s%s\n" % (indent, line)
+      indent = "      "
 
 ####### LOGGING #######
   def log(self, loglevel, msg):
@@ -189,6 +192,14 @@ class ExecTrace():
 
   def print_grouped_ranges(self):
     results = []
+    grouped = self.get_grouped_ranges()
+    for codeblock in grouped:
+      results.append("[start: {}, end: {}]".format(hex(codeblock[0]),
+                                                   hex(codeblock[1])))
+    print ("code ranges:\n  " + "\n  ".join(results) + "\n")
+
+  def get_grouped_ranges(self):
+    grouped = []
     current = None
     for codeblock in sorted(self.visited_ranges, key=lambda cb: cb.start):
       if current == None:
@@ -202,13 +213,15 @@ class ExecTrace():
         continue
 #      print (">>> codeblock.start: {} current[1]: {}\n".format(hex(codeblock.start),
 #                                                               hex(current[1])))
-
-      results.append("[start: {}, end: {}]".format(hex(current[0]),
-                                                   hex(current[1])))
+      grouped.append(current)
       current = [codeblock.start, codeblock.end]
+      return grouped
 
-    print ("ranges:\n  " + "\n  ".join(results) + "\n")
-
+  def save_disassembly_listing(self, filename="output.asm"):
+    asm = open(filename, "w")
+    for codeblock in self.get_grouped_ranges():
+      asm.write(self.disasm[codeblock[0]])
+    asm.close()
 
 def generate_graph():
   def block_name(block):

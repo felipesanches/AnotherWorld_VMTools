@@ -301,5 +301,5 @@ else:
   trace.run()
 #  trace.print_ranges()
 #  trace.print_grouped_ranges()
-  print_video_entries()
-
+#  print_video_entries()
+  trace.save_disassembly_listing()
