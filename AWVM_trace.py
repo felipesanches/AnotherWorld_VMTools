@@ -35,9 +35,7 @@ def getVariableName(value):
     return "0x%02X" % value
 
 class AWVM_Trace(ExecTrace):
-  def disasm_instruction(self):
-    opcode = self.fetch()
-
+  def disasm_instruction(self, opcode):
     if (opcode & 0x80) == 0x80:  # VIDEO
       offset = ((opcode << 8) | self.fetch()) * 2
       x = self.fetch()
@@ -181,8 +179,8 @@ class AWVM_Trace(ExecTrace):
       else:
         return "< conditional jmp with invalid condition: %d >" % condition
 
-      line += ", %s, 0x%04X" % (midterm, offset)
       self.conditional_branch(offset)
+      line += ", %s, 0x%04X" % (midterm, offset)
       return line
 
     elif opcode == 0x0b: # setPalette
@@ -303,4 +301,4 @@ else:
 #  trace.print_ranges()
 #  trace.print_grouped_ranges()
 #  print_video_entries()
-  trace.save_disassembly_listing()
+  trace.save_disassembly_listing("level0.asm")

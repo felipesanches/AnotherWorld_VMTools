@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import sys
 
 class CodeBlock():
   ''' A code block represents an address range in
@@ -87,7 +88,9 @@ class ExecTrace():
     self.PC = entry_point
     while self.PC is not None:
       address = self.PC
-      self.disasm[address] = self.disasm_instruction()
+      opcode = self.fetch()
+      if opcode != -1:
+        self.disasm[address] = self.disasm_instruction(opcode)
 
 ### Methods for declaring the behaviour of branching instructions ###
   def subroutine(self, address):
@@ -97,7 +100,7 @@ class ExecTrace():
     self.schedule_entry_point(self.PC)
     self.schedule_entry_point(address)
 
-    self.log(VERBOSE, "{}: CALL SUBROUTINE ({})".format(hex(self.PC-2), hex(address)))
+    self.log(VERBOSE, "CALL SUBROUTINE ({})".format(hex(address)))
     self.log_status()
     self.restart_from_another_entry_point()
 
@@ -144,7 +147,7 @@ class ExecTrace():
                    end=self.PC-1,
                    exit=["Illegal Opcode: {}".format(hex(opcode))])
     self.log(ERROR, "[{}] ILLEGAL: {}".format(hex(self.PC-1), hex(opcode)))
-    self.restart_from_another_entry_point()
+    sys.exit(-1)
 
 ### Private methods for computing the code-execution graph structure ###
   def already_visited(self, address):
@@ -208,13 +211,15 @@ class ExecTrace():
                      end=self.PC-1,
                      exit=[self.PC])
       self.restart_from_another_entry_point()
+      return -1
     else:
       self.PC += 1
 
   def fetch(self):
     value = ord(self.rom[self.PC])
     self.log(DEBUG, "Fetch at {}: {}".format(hex(self.PC), hex(value)))
-    self.increment_PC()
+    if self.increment_PC() == -1:
+      return -1
     return value
 
 ####### LOGGING #######
@@ -262,13 +267,26 @@ class ExecTrace():
 
   def save_disassembly_listing(self, filename="output.asm"):
     asm = open(filename, "w")
+    next_addr = 0
     for codeblock in sorted(self.visited_ranges, key=lambda cb: cb.start):
+      if codeblock.start > next_addr:
+        indent = "%04X: " % next_addr
+        data = []
+        for addr in range(next_addr, codeblock.start):
+          data.append("0x%02X" % ord(self.rom[addr]))
+          if len(data) == 8:
+            asm.write("{}db {}\n".format(indent, ", ".join(data)))
+            indent = "      "
+            data = []
+        asm.write("{}db {}\n".format(indent, ", ".join(data)))
+
       address = codeblock.start
       indent = "%04X: " % address
-      for address in range(codeblock.start, codeblock.end):
+      for address in range(codeblock.start, codeblock.end+1):
         if address in self.disasm:
           asm.write("%s%s\n" % (indent, self.disasm[address]))
           indent = "      "
+      next_addr = codeblock.end + 1
     asm.close()
 
 def generate_graph():
