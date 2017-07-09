@@ -290,7 +290,8 @@ class AWVM_Trace(ExecTrace):
       return "song id:0x%04X, delay:0x%04X, pos:0x%02X" % (resNum, delay, pos)
 
     else:
-      return "ilegal_instruction!"
+      self.illegal_instruction(opcode)
+      return "illegal_instruction!"
 
 import sys
 if len(sys.argv) != 2:

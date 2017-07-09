@@ -85,12 +85,9 @@ class ExecTrace():
   def run(self, entry_point=0x0000):
     self.current_entry_point = entry_point
     self.PC = entry_point
-    self.disasm[entry_point] = ""
-    self.indent = "%04X: " % entry_point
     while self.PC is not None:
-      line = self.disasm_instruction()
-      self.disasm[self.current_entry_point] += "%s%s\n" % (self.indent, line)
-      self.indent = "      "
+      address = self.PC
+      self.disasm[address] = self.disasm_instruction()
 
 ### Methods for declaring the behaviour of branching instructions ###
   def subroutine(self, address):
@@ -181,8 +178,6 @@ class ExecTrace():
       self.PC = None  # This will finish the crawling
     else:
       address = self.pending_entry_points.pop()
-      self.disasm[address] = ""
-      self.indent = "%04X: " % address
       self.current_entry_point = address
       self.PC = address
       self.log(VERBOSE, "Restarting from: {}".format(hex(address)))
@@ -268,10 +263,12 @@ class ExecTrace():
   def save_disassembly_listing(self, filename="output.asm"):
     asm = open(filename, "w")
     for codeblock in sorted(self.visited_ranges, key=lambda cb: cb.start):
-      if codeblock.start in self.disasm:
-        asm.write(self.disasm[codeblock.start])
-      else:
-        asm.write("// MISSING: %04X\n" % codeblock.start)
+      address = codeblock.start
+      indent = "%04X: " % address
+      for address in range(codeblock.start, codeblock.end):
+        if address in self.disasm:
+          asm.write("%s%s\n" % (indent, self.disasm[address]))
+          indent = "      "
     asm.close()
 
 def generate_graph():
@@ -279,17 +276,17 @@ def generate_graph():
     return "{}-{}".format(hex(block.start), hex(block.end))
 
   import pydotplus
-  graph = pydotplus.graphviz.Graph(graph_name='AWVM trace',
+  graph = pydotplus.graphviz.Graph(graph_name='Code Execution Graph',
 			   graph_type='digraph',
 			   strict=False,
 			   suppress_disconnected=False)
   graph_dict = {}
-  for block in awdis.visited_ranges:
+  for block in self.visited_ranges:
     node = pydotplus.graphviz.Node(block_name(block))
     graph.add_node(node)
     graph_dict[block.start] = node
 
-  for block in awdis.visited_ranges:
+  for block in self.visited_ranges:
     for nb in block.next_block:
       if nb is str:
 	print nb  # this must be an illegal instruction
@@ -303,6 +300,6 @@ def generate_graph():
   open("output.gv", "w").write(graph.to_string())
 
   #from graphviz import Digraph
-  #dot = Digraph(comment='The Round Table')
+  #dot = Digraph(comment='Code Execution Graph')
   #dot.render('test-output/round-table.gv', view=True)
 
