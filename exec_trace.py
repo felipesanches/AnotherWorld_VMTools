@@ -73,8 +73,9 @@ class ExecTrace():
            with operation code <opcode> could not
            be parsed as a valid known instruction.
   """
-  def __init__(self, romfile, loglevel=ERROR):
+  def __init__(self, romfile, rombank=0, loglevel=ERROR):
     self.loglevel = loglevel
+    self.rombank = rombank
     self.rom = open(romfile).read()
     self.visited_ranges = []
     self.pending_entry_points = []
@@ -216,7 +217,7 @@ class ExecTrace():
       self.PC += 1
 
   def fetch(self):
-    value = ord(self.rom[self.PC])
+    value = ord(self.rom[self.rombank + self.PC])
     self.log(DEBUG, "Fetch at {}: {}".format(hex(self.PC), hex(value)))
     if self.increment_PC() == -1:
       return -1

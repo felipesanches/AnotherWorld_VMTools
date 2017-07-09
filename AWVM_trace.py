@@ -296,9 +296,14 @@ if len(sys.argv) != 2:
   print("usage: {} input.rom".format(sys.argv[0]))
 else:
   gamerom = sys.argv[1]
-  trace = AWVM_Trace(gamerom, loglevel=0)
-  trace.run()
-#  trace.print_ranges()
-#  trace.print_grouped_ranges()
-#  print_video_entries()
-  trace.save_disassembly_listing("level0.asm")
+  for game_level in range(9):
+    print "disassembling level {}...".format(game_level)
+    trace = AWVM_Trace(gamerom, rombank=0x10000*game_level, loglevel=0)
+    trace.run()
+#    trace.print_ranges()
+#    trace.print_grouped_ranges()
+#    print_video_entries()
+    print "found {} video entries.".format(len(video_entries.keys()))
+    video_entries = {}
+    trace.save_disassembly_listing("level-{}.asm".format(game_level))
+
