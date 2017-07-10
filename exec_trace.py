@@ -279,7 +279,8 @@ class ExecTrace():
             asm.write("{}db {}\n".format(indent, ", ".join(data)))
             indent = "      "
             data = []
-        asm.write("{}db {}\n".format(indent, ", ".join(data)))
+        if len(data) > 0:
+          asm.write("{}db {}\n".format(indent, ", ".join(data)))
 
       address = codeblock.start
       indent = "%04X: " % address
