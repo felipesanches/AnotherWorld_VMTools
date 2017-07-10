@@ -45,15 +45,16 @@ def getVariableName(value):
 class AWVM_Trace(ExecTrace):
   def disasm_instruction(self, opcode):
     if (opcode & 0x80) == 0x80:  # VIDEO
-      offset = ((opcode << 8) | self.fetch()) * 2
+      offset = (((opcode & 0x7F) << 8) | self.fetch()) * 2
       x = self.fetch()
       y = self.fetch()
+      print("found video_entry {} at PC={}".format(hex(offset), hex(self.PC)))
       register_video_entry(x, y, "0x40" ,offset)
       return "video: off=0x%X x=%d y=%d" % (offset, x, y)
 
     elif (opcode & 0x40) == 0x40: # VIDEO
       offset = self.fetch()
-      offset = ((offset << 8) | self.fetch()) * 2
+      offset = (((offset & 0x7F) << 8) | self.fetch()) * 2
 
       x_str = ""
       x = self.fetch()
@@ -94,6 +95,7 @@ class AWVM_Trace(ExecTrace):
       if opcode & 3 == 3:
         register_video2_entry(x_str, y_str, zoom_str, offset)
       else:
+        print("found video_entry {} at PC={}".format(hex(offset), hex(self.PC)))
         register_video_entry(x_str, y_str, zoom_str, offset)
 
       return "video: off=0x%X x=%s y=%s zoom:%s" % (offset, x_str, y_str, zoom_str)
@@ -303,6 +305,128 @@ class AWVM_Trace(ExecTrace):
       self.illegal_instruction(opcode)
       return "illegal_instruction!"
 
+game_level = None
+polygon_data = None
+pdata_offset = 0
+def fetch_polygon_data():
+  global pdata_offset
+  value = ord(polygon_data[game_level << 16 | pdata_offset])
+  pdata_offset += 1
+  return value
+
+DEFAULT_ZOOM = 0x40
+MAX_POINTS = 50
+def fillPolygon(c, zoom, color, cx, cy):
+  print("    <{}>".format(hex(pdata_offset)))
+  bbox_w = fetch_polygon_data() * float(zoom) / DEFAULT_ZOOM;
+  bbox_h = fetch_polygon_data() * float(zoom) / DEFAULT_ZOOM;
+  numPoints = fetch_polygon_data()
+  print("        -> {} points polygon".format(numPoints))
+
+  if not ((numPoints & 1) == 0 and numPoints < MAX_POINTS):
+    print "error: numPoints = {}".format(numPoints)
+    sys.exit(-1)
+
+  #Read all points, directly from bytecode segment
+  for i in range(numPoints):
+    x = fetch_polygon_data() * float(zoom) / DEFAULT_ZOOM
+    y = fetch_polygon_data() * float(zoom) / DEFAULT_ZOOM
+    print ("        {}   x:{} y:{}".format(hex(pdata_offset), x, y))
+    if i==0:
+      c.move_to(cx - bbox_w/2 + x, cy - bbox_h/2 + y)
+    else:
+      c.line_to(cx - bbox_w/2 + x, cy - bbox_h/2 + y)
+
+  c.close_path()
+  c.set_source_rgb(0, 0, 0) # TODO: add color fill
+  c.stroke()
+
+def readAndDrawPolygon(c, color, zoom, x, y):
+  global pdata_offset
+
+  value = fetch_polygon_data()
+    
+  if value >= 0xC0:
+    if color & 0x80:
+      color = value & 0x3F
+
+    backup = pdata_offset
+    fillPolygon(c, zoom, color, x, y)
+    pdata_offset = backup
+  else:
+    value &= 0x3F
+    if value == 2:
+      readAndDrawPolygonHierarchy(c, zoom, x, y)
+    else:
+      print("ERROR: readAndDrawPolygon() (value != 2)\n")
+      sys.exit(-1)
+
+def readAndDrawPolygonHierarchy(c, zoom, pgc_x, pgc_y):
+  global pdata_offset
+  pt_x = pgc_x - (fetch_polygon_data() * float(zoom) / DEFAULT_ZOOM)
+  pt_y = pgc_y - (fetch_polygon_data() * float(zoom) / DEFAULT_ZOOM)
+  num_children = fetch_polygon_data()
+
+  print ("  hierarchy with {} children.".format(num_children))
+  for child in range(num_children):
+
+    offset = fetch_polygon_data()
+    offset = offset << 8 | fetch_polygon_data()
+
+    po_x = pt_x + (fetch_polygon_data() * float(zoom) / DEFAULT_ZOOM)
+    po_y = pt_y + (fetch_polygon_data() * float(zoom) / DEFAULT_ZOOM)
+    print "child #{}: offset={} ({}) po_x={} po_y={}".format(
+      child, 
+      hex((2*offset) & 0xFFFF), hex(offset),
+      po_x, po_y)
+
+    color = 0xFF
+    if offset & 0x8000:
+      color = fetch_polygon_data() & 0x7F
+      fetch_polygon_data() #and waste a byte...
+
+    backup = pdata_offset
+
+    pdata_offset = (offset & 0x7FFF) * 2
+    readAndDrawPolygon(c, color, zoom, po_x, po_y);
+
+    pdata_offset = backup
+
+COLOR_BLACK = 0xFF
+def extract_polygon_data():
+  global polygon_data, pdata_offset
+  from cairo import SVGSurface, Context, Matrix
+  polygon_data = open("anotherw/cinematic.rom").read()
+  for addr in video_entries.keys():
+    entry = video_entries[addr]
+    if addr > 0xFFFF:
+      print "skipping {}".format(hex(addr))
+      continue
+    import os
+    dirpath = "level_%s/video/" % (game_level)
+    if not os.path.exists(dirpath):
+      os.mkdir("level_%s" % game_level)
+      os.mkdir(dirpath)
+    s = SVGSurface("level_%s/video/%s.svg" % (game_level, hex(addr)), 320, 200)
+    c = Context(s)
+    zoom = entry["zoom"]
+    x = entry["x"]
+    y = entry["y"]
+
+    if not isinstance(zoom, int):
+      zoom = 0x40 #HACK!
+
+    if not isinstance(x, int):
+      x = 160 #HACK!
+
+    if not isinstance(y, int):
+      y = 100 #HACK!
+
+    print ("\ndecoding polygons at {}: {}".format(hex(addr), entry))
+    pdata_offset = addr
+    readAndDrawPolygon(c, COLOR_BLACK, zoom, x, y)
+    s.finish()
+
 import sys
 if len(sys.argv) != 2:
   print("usage: {} input.rom".format(sys.argv[0]))
@@ -315,6 +439,7 @@ else:
 #    trace.print_ranges()
 #    trace.print_grouped_ranges()
 #    print_video_entries()
+    extract_polygon_data()
     print "\t{} video entries.".format(len(video_entries.keys()))
     print "\t{} video2 entries.".format(len(video2_entries.keys()))
     video_entries = {}
