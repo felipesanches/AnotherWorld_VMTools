@@ -10,6 +10,14 @@ def register_video_entry(x, y, zoom, address):
     'zoom': zoom
   }
 
+video2_entries = {}
+def register_video2_entry(x, y, zoom, address):
+  video2_entries[address] = {
+    'x': x,
+    'y': y,
+    'zoom': zoom
+  }
+
 def print_video_entries():
   for addr in sorted(video_entries.keys()):
     v = video_entries[addr]
@@ -83,7 +91,11 @@ class AWVM_Trace(ExecTrace):
         else:
           zoom_str = "[0x%02x]" % self.fetch()
 
-      register_video_entry(x_str, y_str, zoom_str, offset)
+      if opcode & 3 == 3:
+        register_video2_entry(x_str, y_str, zoom_str, offset)
+      else:
+        register_video_entry(x_str, y_str, zoom_str, offset)
+
       return "video: off=0x%X x=%s y=%s zoom:%s" % (offset, x_str, y_str, zoom_str)
 
     elif opcode == 0x00: # movConst
@@ -303,7 +315,9 @@ else:
 #    trace.print_ranges()
 #    trace.print_grouped_ranges()
 #    print_video_entries()
-    print "found {} video entries.".format(len(video_entries.keys()))
+    print "\t{} video entries.".format(len(video_entries.keys()))
+    print "\t{} video2 entries.".format(len(video2_entries.keys()))
     video_entries = {}
+    video2_entries = {}
     trace.save_disassembly_listing("level-{}.asm".format(game_level))
 
