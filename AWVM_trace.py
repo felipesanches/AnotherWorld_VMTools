@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 from exec_trace import ExecTrace
-
+OUTPUT_DIR = "output"
 game_level = None
 cinematic_counter = 0
 video2_counter = 0
@@ -29,7 +29,7 @@ def register_video2_entry(x, y, zoom, address):
   if address in video2_entries.keys():
     return video2_entries[address]["label"]
 
-  label = "LEVEL_%d_VIDEO2_%03d" % (game_level, video2_counter)
+  label = "COMMON_VIDEO_%03d" % (video2_counter)
   video2_counter += 1
   video2_entries[address] = {
     'x': x,
@@ -440,18 +440,16 @@ def extract_polygon_data(cinematic):
   if cinematic:
     polygon_data = open("anotherw/cinematic.rom").read()
     entries = cinematic_entries
-    level_path = "level_%s" % (game_level)
+    level_path = "%s/level_%s" % (OUTPUT_DIR, game_level)
     dirpath = "%s/cinematic/" % (level_path)
-    if not os.path.exists(level_path):
-      os.mkdir(level_path)
+    makedir(level_path)
   else:
     polygon_data = open("anotherw/video2.rom").read()
     entries = video2_entries
-    dirpath = "common_video/"
+    dirpath = "%s/common_video/" % (OUTPUT_DIR)
     game_level = 0
 
-  if not os.path.exists(dirpath):
-    os.mkdir(dirpath)
+  makedir(dirpath)
 
   for addr in entries.keys():
     entry = entries[addr]
@@ -479,11 +477,16 @@ def extract_polygon_data(cinematic):
   cinematic_entries = {}
   cinematic_counter = 0
 
+def makedir(path):
+  if not os.path.exists(path):
+    os.mkdir(path)
+
 import sys
 if len(sys.argv) != 2:
   print("usage: {} input.rom".format(sys.argv[0]))
 else:
   gamerom = sys.argv[1]
+  makedir(OUTPUT_DIR)
   for game_level in range(9):
     print "disassembling level {}...".format(game_level)
     trace = AWVM_Trace(gamerom, rombank=0x10000*game_level, loglevel=0)
@@ -492,9 +495,8 @@ else:
 #    trace.print_grouped_ranges()
 #    print_video_entries()
 
-    level_path = "level_%s" % (game_level)
-    if not os.path.exists(level_path):
-      os.mkdir(level_path)
+    level_path = "%s/level_%s" % (OUTPUT_DIR, game_level)
+    makedir(level_path)
     trace.save_disassembly_listing("{}/level-{}.asm".format(level_path, game_level))
     print "\t{} cinematic entries.".format(len(cinematic_entries.keys()))
     # cinematic polygon data:
