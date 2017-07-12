@@ -268,6 +268,8 @@ class ExecTrace():
 
   def save_disassembly_listing(self, filename="output.asm"):
     asm = open(filename, "w")
+    asm.write(self.output_disasm_headers())
+
     next_addr = 0
     for codeblock in sorted(self.visited_ranges, key=lambda cb: cb.start):
       if codeblock.start > next_addr:
