@@ -1,0 +1,52 @@
+BALL_IMAGE    EQU 0x031E
+BALL_X        EQU 0x00
+BALL_Y        EQU 0x01
+BALL_ZOOM     EQU 0x02
+SPEED         EQU 0x03
+BALL_VX       EQU 0x04
+BALL_VY       EQU 0x05
+PAUSE_SLICES  EQU 0xFF
+
+init:
+0000: 00 FF 00 02           mov [PAUSE_SLICES], 2 ; 2*20ms = 40ms per frame = 25 frames / sec
+0004: 00 03 00 01           mov [SPEED], 1
+0008: 00 00 00 A0           mov [BALL_X], 160
+000C: 00 01 00 64           mov [BALL_Y], 100
+0010: 00 02 00 40           mov [BALL_ZOOM], 0x40
+0014: 01 04 03              mov [BALL_VX], [SPEED]
+0017: 02 04 03              add [BALL_VX], [SPEED]
+001A: 01 05 03              mov [BALL_VY], [SPEED]
+001D: 02 05 03              add [BALL_VY], [SPEED]
+0020: 0b 03 FF              setPalette 0x03
+0023: 0D 00                 selectVideoPage 0x00
+
+mainloop:
+0025: 0E 00 07              fillVideoPage 0x00, color:0x07
+0028: 55 01 8F 00 01 02     video off=BALL_IMAGE x=[BALL_X] y=[BALL_Y] zoom:[BALL_ZOOM]
+002E: 10 00                 blitFramebuffer 0x00
+0030: 01 00 00              mov [0x00], [0x00] // 3 byte nop (to avoid re-calculating all addresses below)
+0033: 13 00 03              sub [BALL_X], [SPEED]
+0036: 02 00 04              add [BALL_X], [BALL_VX]
+0039: 13 01 03              sub [BALL_Y], [SPEED]
+003C: 02 01 05              add [BALL_Y], [BALL_VY]
+
+003F: 0A 44 00 01 40 00 4A  jl [BALL_X], 320, _1
+0046: 00 04 00 00           mov [BALL_VX], 0
+
+_1:
+004A: 0A 02 00 00 00 56     jg [BALL_X], 0, _2
+0050: 01 04 03              mov [BALL_VX], [SPEED]
+0053: 02 04 03              add [BALL_VX], [SPEED]
+
+_2:
+0056: 0A 04 01 C8 00 60     jl [BALL_Y], 200, _3
+005C: 00 05 00 00           mov [BALL_VY], 0
+
+_3:
+0060: 0A 02 01 00 00 6C    jg [BALL_Y], 0, _4
+0066: 01 05 03             mov [BALL_VY], [SPEED]
+0069: 02 05 03             add [BALL_VY], [SPEED]
+
+_4:
+006C: 07 00 25             jmp mainloop
+
