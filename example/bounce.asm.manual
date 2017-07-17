@@ -21,8 +21,8 @@ init:
 0023: 0D 00                 selectVideoPage 0x00
 
 mainloop:
-0025: 0E 00 07              fillVideoPage 0x00, color:0x07
-0028: 55 01 8F 00 01 02     video off=BALL_IMAGE x=[BALL_X] y=[BALL_Y] zoom:[BALL_ZOOM]
+0025: 0E 00 07              fill page=0x00, color=0x07
+0028: 55 01 8F 00 01 02     video offset=BALL_IMAGE, x=[BALL_X], y=[BALL_Y], zoom=[BALL_ZOOM]
 002E: 10 00                 blitFramebuffer 0x00
 0030: 01 00 00              mov [0x00], [0x00] // 3 byte nop (to avoid re-calculating all addresses below)
 0033: 13 00 03              sub [BALL_X], [SPEED]

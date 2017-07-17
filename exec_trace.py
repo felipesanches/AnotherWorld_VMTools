@@ -114,6 +114,14 @@ class ExecTrace():
     self.restart_from_another_entry_point()
 
   def conditional_branch(self, address):
+    self.log(VERBOSE, "CONDITIONAL BRANCH to {}".format(hex(address)))
+    self.branch(address, conditional=True)
+
+  def unconditional_jump(self, address):
+    self.log(VERBOSE, "UNCONDITIONAL JUMP to {}".format(hex(address)))
+    self.branch(address, conditional=False)
+
+  def branch(self, address, conditional):
     if address > self.current_entry_point and address < self.PC:
       self.add_range(start=self.current_entry_point,
                      end=address-1,
@@ -121,25 +129,16 @@ class ExecTrace():
       self.add_range(start=address,
                      end=self.PC-1,
                      exit=[self.PC, address])
-      self.schedule_entry_point(self.PC)
+      if conditional:
+        self.schedule_entry_point(self.PC)
     else:
       self.add_range(start=self.current_entry_point,
                      end=self.PC-1,
                      exit=[self.PC, address])
-      self.schedule_entry_point(self.PC)
+      if conditional:
+        self.schedule_entry_point(self.PC)
       self.schedule_entry_point(address)
 
-    self.log(VERBOSE, "CONDITIONAL JUMP to {}".format(hex(address)))
-    self.log_ranges()
-    self.restart_from_another_entry_point()
-
-  def unconditional_jump(self, address):
-    self.add_range(start=self.current_entry_point,
-                   end=self.PC-1,
-                   exit=[address])
-    self.schedule_entry_point(address)
-
-    self.log(VERBOSE, "JUMP to {}".format(hex(address)))
     self.log_ranges()
     self.restart_from_another_entry_point()
 
@@ -272,24 +271,30 @@ class ExecTrace():
 
     next_addr = 0
     for codeblock in sorted(self.visited_ranges, key=lambda cb: cb.start):
+      if codeblock.start < next_addr:
+        # Skip repeated blocks!
+        # something wrong happened here
+        # I once saw a single byte range "LABEL_25D8: break" showing up twice here...
+        continue
+
       if codeblock.start > next_addr:
-        indent = "%04X: " % next_addr
+        indent = "LABEL_%04X: " % next_addr
         data = []
         for addr in range(next_addr, codeblock.start):
-          data.append("0x%02X" % ord(self.rom[addr]))
+          data.append("0x%02X" % ord(self.rom[self.rombank + addr]))
           if len(data) == 8:
             asm.write("{}db {}\n".format(indent, ", ".join(data)))
-            indent = "      "
+            indent = "            "
             data = []
         if len(data) > 0:
           asm.write("{}db {}\n".format(indent, ", ".join(data)))
 
       address = codeblock.start
-      indent = "%04X: " % address
+      indent = "LABEL_%04X: " % address
       for address in range(codeblock.start, codeblock.end+1):
         if address in self.disasm:
           asm.write("%s%s\n" % (indent, self.disasm[address]))
-          indent = "      "
+          indent = "            "
       next_addr = codeblock.end + 1
     asm.close()
 
