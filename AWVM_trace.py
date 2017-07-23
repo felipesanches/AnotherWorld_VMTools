@@ -444,7 +444,7 @@ def readAndDrawPolygonHierarchy(c, zoom, pgc_x, pgc_y):
 import os
 from cairo import SVGSurface, Context, Matrix
 COLOR_BLACK = 0xFF
-def extract_polygon_data(cinematic):
+def extract_polygon_data(romset_dir, cinematic):
   global polygon_data, pdata_offset
   global cinematic_entries
   global cinematic_counter
@@ -452,13 +452,13 @@ def extract_polygon_data(cinematic):
   global game_level
 
   if cinematic:
-    polygon_data = open("anotherw/cinematic.rom").read()
+    polygon_data = open("{}/cinematic.rom".format(romset_dir)).read()
     entries = cinematic_entries
     level_path = "%s/level_%s" % (OUTPUT_DIR, game_level)
     dirpath = "%s/cinematic/" % (level_path)
     makedir(level_path)
   else:
-    polygon_data = open("anotherw/video2.rom").read()
+    polygon_data = open("{}/video2.rom".format(romset_dir)).read()
     entries = video2_entries
     dirpath = "%s/common_video/" % (OUTPUT_DIR)
     game_level = 0
@@ -497,9 +497,10 @@ def makedir(path):
 
 import sys
 if len(sys.argv) != 2:
-  print("usage: {} input.rom".format(sys.argv[0]))
+  print("usage: {} <romset_dir>".format(sys.argv[0]))
 else:
-  gamerom = sys.argv[1]
+  romset_dir = sys.argv[1]
+  gamerom = "{}/bytecode.rom".format(romset_dir)
   makedir(OUTPUT_DIR)
   for game_level in range(9):
     print "disassembling level {}...".format(game_level)
@@ -514,10 +515,10 @@ else:
     trace.save_disassembly_listing("{}/level-{}.asm".format(level_path, game_level))
     print "\t{} cinematic entries.".format(len(cinematic_entries.keys()))
     # cinematic polygon data:
-    extract_polygon_data(True)
+    extract_polygon_data(romset_dir, True)
 
   # common polygon data:
   print "\t{} video2 entries.".format(len(video2_entries.keys()))
-  extract_polygon_data(False)
+  extract_polygon_data(romset_dir, False)
 
 
