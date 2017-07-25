@@ -357,12 +357,41 @@ class AWVM_Trace(ExecTrace):
       self.illegal_instruction(opcode)
       return "; DISASM ERROR! Illegal instruction (opcode = 0x%02X)" % opcode
 
+used_pdata = []
+def visited_pdata(addr):
+  """ Keeps track of all polygon data byte addresses that are
+      read during extraction of the artwork data."""
+  global used_pdata
+  if addr not in used_pdata:
+    used_pdata.append(addr) 
+
+def print_unused_polygon_data():
+  """Prints which ranges of the polygon data have
+     not been ever used in the bytecode."""
+  max_addr = sorted(used_pdata)[-1]
+  state = 0
+  for addr in xrange(max_addr+1):
+    if addr not in used_pdata:
+      if state == 0:
+        start = addr
+        state = 1
+      else:
+        end = addr
+    else:
+      if state == 1:
+        print ("{}-{} ({})".format(hex(start), hex(end), end-start+1))
+        state = 0
+  if state == 1:
+    end = max_addr
+    print ("{}-{} ({})".format(hex(start), hex(end), end-start+1))
+
 game_level = None
 polygon_data = None
 pdata_offset = 0
 def fetch_polygon_data():
   global pdata_offset
   value = ord(polygon_data[game_level << 16 | pdata_offset])
+  visited_pdata(pdata_offset)
   pdata_offset += 1
   return value
 
@@ -518,7 +547,10 @@ else:
     trace.save_disassembly_listing("{}/level-{}.asm".format(level_path, game_level))
     print "\t{} cinematic entries.".format(len(cinematic_entries.keys()))
     # cinematic polygon data:
+    used_pdata = []
     extract_polygon_data(romset_dir, True)
+    # print_unused_polygon_data()
+
 
   # common polygon data:
   print "\t{} video2 entries.".format(len(video2_entries.keys()))
