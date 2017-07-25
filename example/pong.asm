@@ -12,8 +12,7 @@ BALL_VX              EQU 0x05
 BALL_VY              EQU 0x06
 PADDLE_X             EQU 0x07
 PADDLE_Y             EQU 0x08
-PADDLE_SPEED         EQU 0x09
-ZOOM_SPEED           EQU 0x0A
+ZOOM_SPEED           EQU 0x09
 RANDOM_SEED          EQU 0x3C
 HACK_VAR_54          EQU 0x54
 HACK_VAR_67          EQU 0x67
@@ -29,6 +28,9 @@ HERO_POS_LEFT_RIGHT  EQU 0xFC
 HERO_POS_MASK        EQU 0xFD
 HERO_ACTION_POS_MASK EQU 0xFE
 PAUSE_SLICES         EQU 0xFF
+
+; constants:
+PADDLE_SPEED         EQU 4
 
 ; This programs uses a single VM thread and a single videopage.
 
@@ -69,10 +71,10 @@ UP_ARROW    EQU 8
 update_paddle_position:
 ;maybe_move_right:
       jne [HERO_ACTION_POS_MASK], RIGHT_ARROW, maybe_move_left
-      add [PADDLE_X], [PADDLE_SPEED]
+      add [PADDLE_X], PADDLE_SPEED
 maybe_move_left:
       jne [HERO_ACTION_POS_MASK], LEFT_ARROW, maybe_zoom_in
-      sub [PADDLE_X], [PADDLE_SPEED] 
+      sub [PADDLE_X], PADDLE_SPEED
 maybe_zoom_in:
       jne [HERO_ACTION_POS_MASK], UP_ARROW, maybe_zoom_out
       add [PADDLE_ZOOM], [ZOOM_SPEED]
@@ -109,7 +111,6 @@ var_init:
       ; 2*SPEED as +SPEED
       mov [PAUSE_SLICES], 2 ; 2*20ms = 40ms per frame = 25 frames / sec
       mov [BALL_SPEED], 1
-      mov [PADDLE_SPEED], 4
       mov [ZOOM_SPEED], 1
       mov [BALL_X], 160
       mov [BALL_Y], 100

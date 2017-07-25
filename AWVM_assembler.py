@@ -54,9 +54,14 @@ def byte(v):
       v = 0
   rom.write(chr(v))
 
-def word(v):
+def word(v, negative=False):
   if v in symbols:
     v = symbols[v]
+
+  # we need to do it here, right after
+  # resolving symbolic names above.
+  if negative:
+    v = 0x10000 - v
 
   try:
     byte(v >> 8)
@@ -96,11 +101,17 @@ def encode(instr):
 
   elif instr["name"] == "sub":
     dest, src = instr["operands"]
-    if src["type"] != "var":
-      print "ERROR: 'SUB' instruction operands must be both VM vars."
-    byte(0x13)
-    byte(dest["value"])
-    byte(src["value"])
+    if src["type"] == "var":
+      byte(0x13)
+      byte(dest["value"])
+      byte(src["value"])
+    else:
+      # here we actually emit an add instruction with the
+      # second operand multiplied by -1 and represented in
+      # two's complement notation
+      byte(0x03)
+      byte(dest["value"])
+      word(src["value"], negative=True)
 
   elif instr["name"] == "and":
     dest, src = instr["operands"]
