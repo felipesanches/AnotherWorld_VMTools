@@ -169,7 +169,10 @@ class AWVM_Trace(ExecTrace):
       dstVar = getVariableName(self.fetch())
       immediate = self.fetch()
       immediate = (immediate << 8) | self.fetch()
-      return "add [%s], 0x%04X" % (dstVar, immediate)
+      if immediate >= 0x8000:
+        return "sub [%s], 0x%04X" % (dstVar, 0x10000 - immediate)
+      else:
+        return "add [%s], 0x%04X" % (dstVar, immediate)
 
     elif opcode == 0x04: # call
       address = self.fetch()
