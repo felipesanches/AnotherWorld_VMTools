@@ -7,9 +7,29 @@ cinematic_counter = 0
 video2_counter = 0
 cinematic_entries = {}
 video2_entries = {}
+romset_dir = None
+str_data = None
 
 VIDEO2=0 # shared polygon resource
 CINEMATIC=1 # level-specific bank of polygonal data
+
+def get_text_string(str_id):
+  str_index = open("{}/str_index.rom".format(romset_dir), "rb")
+  str_index.seek((str_id-1)*2)
+  str_index.read(1)
+  index = ord(str_index.read(1))
+  index = index << 8 | ord(str_index.read(1))
+  str_index.close()
+
+  the_string = ""
+  while ord(str_data[index]) != 0x00:
+    c = str_data[index]
+    if c == '\n':
+      c = "\\n"
+    the_string += c
+    index += 1
+
+  return the_string
 
 def register_cinematic_entry(x, y, zoom, address):
   global cinematic_counter
@@ -297,7 +317,8 @@ class AWVM_Trace(ExecTrace):
       x = self.fetch()
       y = self.fetch()
       color = self.fetch()
-      return "text id=0x%04X, x=%d, y=%d, color=0x%02X" % (stringId, x, y, color)
+      text_string = get_text_string(stringId)
+      return "text id=0x%04X, x=%d, y=%d, color=0x%02X ; \"%s\"" % (stringId, x, y, color, text_string)
 
     elif opcode == 0x13: # sub
       var1Str = getVariableName(self.fetch())
@@ -391,7 +412,7 @@ pdata_offset = 0
 def fetch_polygon_data():
   global pdata_offset
   value = ord(polygon_data[game_level << 16 | pdata_offset])
-  visited_pdata(pdata_offset)
+  # visited_pdata(pdata_offset)
   pdata_offset += 1
   return value
 
@@ -532,6 +553,7 @@ if len(sys.argv) != 2:
   print("usage: {} <romset_dir>".format(sys.argv[0]))
 else:
   romset_dir = sys.argv[1]
+  str_data = open("{}/str_data.rom".format(romset_dir), "rb").read()
   gamerom = "{}/bytecode.rom".format(romset_dir)
   makedir(OUTPUT_DIR)
   for game_level in range(9):
