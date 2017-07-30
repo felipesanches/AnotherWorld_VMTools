@@ -7,7 +7,6 @@ BALL_X               EQU 0x00
 BALL_Y               EQU 0x01
 BALL_ZOOM            EQU 0x02
 PADDLE_ZOOM          EQU 0x03
-BALL_SPEED           EQU 0x04
 BALL_VX              EQU 0x05
 BALL_VY              EQU 0x06
 PADDLE_X             EQU 0x07
@@ -31,6 +30,7 @@ PAUSE_SLICES         EQU 0xFF
 
 ; constants:
 PADDLE_SPEED         EQU 4
+BALL_SPEED           EQU 1
 
 ; This programs uses a single VM thread and a single videopage.
 
@@ -49,9 +49,7 @@ mainloop:
 
 update_ball_position:
       ; update the screen coordinates based on the current x and y velocities:
-      sub [BALL_X], [BALL_SPEED]
       add [BALL_X], [BALL_VX]
-      sub [BALL_Y], [BALL_SPEED]
       add [BALL_Y], [BALL_VY]
       ret
 
@@ -90,17 +88,17 @@ detect_border_colision:
       ; mirror the velocities if the symbol collides with the borders:
       jl [BALL_X], 320, _1
       mov [BALL_VX], 0
+      sub [BALL_VX], BALL_SPEED
 _1:
       jg [BALL_X], 0, _2
-      mov [BALL_VX], [BALL_SPEED]
-      add [BALL_VX], [BALL_SPEED]
+      mov [BALL_VX], BALL_SPEED
 _2:
       jl [BALL_Y], 200, _3
       mov [BALL_VY], 0
+      sub [BALL_VY], BALL_SPEED
 _3:
       jg [BALL_Y], 0, _4
-      mov [BALL_VY], [BALL_SPEED]
-      add [BALL_VY], [BALL_SPEED]
+      mov [BALL_VY], BALL_SPEED
 _4:
       ret
 
@@ -110,7 +108,6 @@ var_init:
       ; SPEED as zero
       ; 2*SPEED as +SPEED
       mov [PAUSE_SLICES], 2 ; 2*20ms = 40ms per frame = 25 frames / sec
-      mov [BALL_SPEED], 1
       mov [ZOOM_SPEED], 1
       mov [BALL_X], 160
       mov [BALL_Y], 100
@@ -118,10 +115,8 @@ var_init:
       mov [PADDLE_Y], 180
       mov [BALL_ZOOM], 0x40
       mov [PADDLE_ZOOM], 0x40
-      mov [BALL_VX], [BALL_SPEED]
-      add [BALL_VX], [BALL_SPEED]
-      mov [BALL_VY], [BALL_SPEED]
-      add [BALL_VY], [BALL_SPEED]
+      mov [BALL_VX], BALL_SPEED
+      mov [BALL_VY], BALL_SPEED
       ret
 
 video_init:
