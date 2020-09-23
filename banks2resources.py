@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 import os
 import sys
 
@@ -34,7 +34,7 @@ def read_mem_entry(memlist, n):
 
 def read_msdos_memlist(memlist_filename):
   if not os.path.exists(memlist_filename):
-    print ("Memlist file was not found at: '{}'".format(memlist_filename))
+    print (f"Memlist file was not found at: {memlist_filename}")
     sys.exit(-1)
 
   memlist = open(memlist_filename, "rb")
@@ -141,7 +141,7 @@ class Unpacker():
 
 def main():
   if len(sys.argv) != 3:
-    print ("usage: {} <memlist.bin> <output_dir>\n".format(sys.argv[0]))
+    print (f"usage: {sys.argv[0]} <memlist.bin> <output_dir>\n")
     sys.exit(-1)
 
   memlist_filename = sys.argv[1]
@@ -152,12 +152,10 @@ def main():
   directory = os.path.dirname(memlist_filename)
   entries = read_msdos_memlist(memlist_filename)
   for resource_index, entry in enumerate(entries):
-    print ("id:{}\ttype:{}"
-           "\toffset:{}\tsize:{}/{}").format(entry["bankId"],
-                                           entry["type"],
-                                           hex(entry["bankOffset"]),
-                                           entry["packedSize"],
-                                           entry["size"])
+    if entry != None:
+      print (f"id:{entry['bankId']}\ttype:{entry['type']}"
+             f"\toffset:{hex(entry['bankOffset'])}"
+             f"\tsize:{entry['packedSize']}/{entry['size']}")
     bank = open(os.path.join(directory, "bank%02x" % entry["bankId"]))
     bank.seek(entry["bankOffset"])
     data = bank.read(entry["packedSize"])
