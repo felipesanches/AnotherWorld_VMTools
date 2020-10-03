@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+
 import os
 import sys
 
@@ -99,7 +100,7 @@ class Unpacker():
     while count:
       count -= 1
       self.buffer.seek(self.output_idx)
-      self.buffer.write(chr(self.getCode(8)))
+      self.buffer.write(bytes(self.getCode(8)))
       self.output_idx -= 1
 
   def decUnk2(self, numChunks):
@@ -138,7 +139,6 @@ class Unpacker():
       self.chk |= 0x80000000
     return rCF
 
-
 def main():
   if len(sys.argv) != 3:
     print (f"usage: {sys.argv[0]} <memlist.bin> <output_dir>\n")
@@ -156,7 +156,9 @@ def main():
       print (f"id:{entry['bankId']}\ttype:{entry['type']}"
              f"\toffset:{hex(entry['bankOffset'])}"
              f"\tsize:{entry['packedSize']}/{entry['size']}")
-    bank = open(os.path.join(directory, "bank%02x" % entry["bankId"]))
+
+    bank_file = os.path.join(directory, "bank%02x" % entry["bankId"])
+    bank = open(bank_file, "rb")
     bank.seek(entry["bankOffset"])
     data = bank.read(entry["packedSize"])
     if entry["packedSize"] != entry["size"]:
