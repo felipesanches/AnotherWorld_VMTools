@@ -13,7 +13,7 @@ def parse_value(v_str):
     else:
       return int(v_str)
   except:
-#    print ("not a number! ({})".format(v_str))
+#    print (f"not a number! ({v_str})")
     return v_str
 
 def parse_operand(operand_str):
@@ -69,7 +69,7 @@ def word(v, negative=False):
   except:
     word(0x0000)
     if second_pass:
-      print "Symbol '{}' could not be found.".format(v)
+      print (f"Symbol '{v}' could not be found.")
 
 def encode(instr):
   if instr["name"] == "db":
@@ -116,7 +116,7 @@ def encode(instr):
   elif instr["name"] == "and":
     dest, src = instr["operands"]
     if src["type"] != "value":
-      print "ERROR: 'AND' instruction second operand must be an immediate 16bit value."
+      print ("ERROR: 'AND' instruction second operand must be an immediate 16bit value.")
     byte(0x14)
     byte(dest["value"])
     word(src["value"])
@@ -124,7 +124,7 @@ def encode(instr):
   elif instr["name"] == "or":
     dest, src = instr["operands"]
     if src["type"] != "value":
-      print "ERROR: 'OR' instruction second operand must be an immediate 16bit value."
+      print ("ERROR: 'OR' instruction second operand must be an immediate 16bit value.")
     byte(0x15)
     byte(dest["value"])
     word(src["value"])
@@ -132,7 +132,7 @@ def encode(instr):
   elif instr["name"] == "shl":
     dest, src = instr["operands"]
     if src["type"] != "value":
-      print "ERROR: 'SHL' instruction second operand must be an immediate 16bit value."
+      print ("ERROR: 'SHL' instruction second operand must be an immediate 16bit value.")
     byte(0x16)
     byte(dest["value"])
     word(src["value"])
@@ -140,7 +140,7 @@ def encode(instr):
   elif instr["name"] == "shr":
     dest, src = instr["operands"]
     if src["type"] != "value":
-      print "ERROR: 'SHR' instruction second operand must be an immediate 16bit value."
+      print ("ERROR: 'SHR' instruction second operand must be an immediate 16bit value.")
     byte(0x17)
     byte(dest["value"])
     word(src["value"])
@@ -323,7 +323,7 @@ def encode(instr):
         opcode |= 0x01
       else:
         if zoom["value"] != 0x40:
-          print "ERROR! Zoom can't be a constant other than 0x40!"
+          print ("ERROR! Zoom can't be a constant other than 0x40!")
 
       byte(opcode)
       for b in operand_bytes:
@@ -339,7 +339,7 @@ def keyword_operands(instr):
   return ops
 
 def assemble(input_filename):
-  print "\nAssembling '{}' ...".format(input_filename)
+  print (f"\nAssembling '{input_filename}' ...")
   global address, rom, symbols
   instructions = []
   label = None
@@ -358,7 +358,7 @@ def assemble(input_filename):
       line = line.split(":")[1]
 
     for instruction_name in ["db", "mov", "add", "sub", "jmp",
-                             "call", "ret", "break", "setPalette", 
+                             "call", "ret", "break", "setPalette",
                              "selectVideoPage", "copyVideoPage",
                              "blitFramebuffer", "video", "fill",
                              "je", "jne", "jge", "jg", "jle", "jl",
@@ -375,7 +375,7 @@ def assemble(input_filename):
 #  print symbols
 #  print "\n".join([str(instr) for instr in instructions])
 
-  print "First Pass."
+  print ("First Pass.")
   address = 0
 #  print "\n".join(map(str, instructions))
   for label, instruction in instructions:
@@ -385,7 +385,7 @@ def assemble(input_filename):
 
 #  print symbols
 
-  print "Second Pass."
+  print ("Second Pass.")
   second_pass = True
   address = 0
   for label, instruction in instructions:
@@ -397,7 +397,7 @@ def assemble(input_filename):
 
 import sys
 if len(sys.argv) != 2:
-  print("usage: {} input.asm".format(sys.argv[0]))
+  print(f"usage: {sys.argv[0]} input.asm")
   sys.exit(-1)
 
 assemble(sys.argv[1])
