@@ -1,4 +1,10 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
+#
+# (c) 2020 Felipe Correa da Silva Sanches
+# Licensed under GPL version 2 or later
+#
+# This program generates the ROM files needed for the FPGA project at
+# https://github.com/felipesanches/AnotherWorld_FPGA
 
 target_folder = "data/aw_msdos"
 output_folder = "anotherw/"
@@ -32,28 +38,28 @@ video2_resource_id = 0x11
 
 
 def generate_bytecode_rom():
-  bytecode_rom = open("%s/bytecode.rom" % (output_folder), "w")
+  bytecode_rom = open(f"{output_folder}/bytecode.rom", "wb")
   for res in bytecode_resource_ids:
-    data = open("%s/resource-0x%02x.bin" % (target_folder, res)).read()
-    for i in xrange(0x10000):
+    data = open(f"{target_folder}/resource-0x{res:02x}.bin", "rb").read()
+    for i in range(0x10000):
       if i < len(data):
-        bytecode_rom.write(data[i])
+        bytecode_rom.write(bytes([data[i]]))
       else:
-        bytecode_rom.write(chr(0xFF))
+        bytecode_rom.write(bytes([0xFF]))
 
 
 def generate_screens_rom():
-    screens_rom = open("%s/screens.rom" % (output_folder), "w")
+    screens_rom = open(f"{output_folder}/screens.rom", "wb")
     for res in screen_resource_ids:
-        data = open("%s/resource-0x%02x.bin" % (target_folder, res)).read()
+        data = open(f"{target_folder}/resource-0x{res:02x}.bin", "rb").read()
         offset = 0
         for h in range(200):
             for w in range(40):
                 p = [
-                  ord(data[offset + 8000 * 3]),
-                  ord(data[offset + 8000 * 2]),
-                  ord(data[offset + 8000 * 1]),
-                  ord(data[offset + 8000 * 0])
+                  data[offset + 8000 * 3],
+                  data[offset + 8000 * 2],
+                  data[offset + 8000 * 1],
+                  data[offset + 8000 * 0]
                 ]
                 for j in range(4):
                     value = 0
@@ -62,53 +68,58 @@ def generate_screens_rom():
                         if p[i & 3] & 0x80:
                             value |= 1
                         p[i & 3] <<= 1
-                    screens_rom.write(chr((value >> 4) & 0x0F))
-                    screens_rom.write(chr(value & 0x0F))
+                    screens_rom.write(bytes([(value >> 4) & 0x0F]))
+                    screens_rom.write(bytes([value & 0x0F]))
                 offset += 1
             for i in range(512-320):
-                screens_rom.write(chr(0xFF))
+                screens_rom.write(bytes([0xFF]))
         for i in range(256-200):
             for j in range(512):
-                screens_rom.write(chr(0xFF))
+                screens_rom.write(bytes([0xFF]))
 
     screens_rom.close()
 
 
 def generate_samples_rom():
   # TODO: Implement-me!
-  samples = open("%s/samples.rom" % (output_folder), "w")
+  samples = open(f"{output_folder}/samples.rom", "wb")
   for res in sample_resource_ids:
-    s = open("%s/resource-0x%02x.bin" % (target_folder, res))
-    value = ord(s.read(1))
-    value += ord(s.read(1)) << 8
+    s = open(f"{target_folder}/resource-0x{res:02x}.bin", "rb")
+    value = s.read(1)
+    value += s.read(1) << 8
     print("0x%04X" % value)
 
 def generate_palettes_rom():
-  palettes = open("%s/palettes.rom" % (output_folder), "w")
+  palettes = open(f"{output_folder}/palettes.rom", "wb")
   for res in palette_resource_ids:
-    pal = open("%s/resource-0x%02x.bin" % (target_folder, res)).read()
+    pal = open(f"{target_folder}/resource-0x{res:02x}.bin", "rb").read()
     palettes.write(pal)
 
 def generate_cinematic_rom():
-  rom = open("%s/cinematic.rom" % (output_folder), "w")
+  rom = open(f"{output_folder}/cinematic.rom", "wb")
   for res in cinematic_resource_ids:
-    cinematic = open("%s/resource-0x%02x.bin" % (target_folder, res)).read()
-    for i in xrange(0x10000):
+    cinematic = open(f"{target_folder}/resource-0x{res:02x}.bin", "rb").read()
+    for i in range(0x10000):
       if i < len(cinematic):
-        rom.write(cinematic[i])
+        rom.write(bytes([cinematic[i]]))
       else:
-        rom.write(chr(0xFF))
+        rom.write(bytes([0xFF]))
   rom.close()
 
 def generate_video2_rom():
-  rom = open("%s/video2.rom" % (output_folder), "w")
-  v2data = open("%s/resource-0x%02x.bin" % (target_folder, video2_resource_id)).read()
-  for i in xrange(0x8000):
+  rom = open(f"{output_folder}/video2.rom", "wb")
+  v2data = open(f"{target_folder}/resource-0x{video2_resource_id:02x}.bin", "rb").read()
+  for i in range(0x8000):
     if i < len(v2data):
-      rom.write(v2data[i])
+      rom.write(bytes([v2data[i]]))
     else:
-      rom.write(chr(0xFF))
+      rom.write(bytes([0xFF]))
   rom.close()
+
+# create the output_folder if it does not yet exist:
+import os
+if not os.path.exists(output_folder):
+    os.makedirs(output_folder)
 
 generate_bytecode_rom()
 generate_screens_rom()

@@ -76,7 +76,7 @@ class ExecTrace():
   def __init__(self, romfile, rombank=0, loglevel=ERROR):
     self.loglevel = loglevel
     self.rombank = rombank
-    self.rom = open(romfile).read()
+    self.rom = open(romfile, "rb").read()
     self.visited_ranges = []
     self.pending_entry_points = []
     self.current_entry_point = None
@@ -166,7 +166,7 @@ class ExecTrace():
                                 next_block=[address])
           codeblock.start = address
           # and also split ownership of subroutine calls:
-          for instr_addr, call_addr in codeblock.subroutines.iteritems():
+          for instr_addr, call_addr in codeblock.subroutines.items():
             if instr_addr < address:
               new_block.add_subroutine_call(instr_addr, call_addr)
               del codeblock.subroutines[instr_addr]
@@ -216,7 +216,7 @@ class ExecTrace():
       self.PC += 1
 
   def fetch(self):
-    value = ord(self.rom[self.rombank + self.PC])
+    value = self.rom[self.rombank + self.PC]
     self.log(DEBUG, "Fetch at {}: {}".format(hex(self.PC), hex(value)))
     if self.increment_PC() == -1:
       return -1
@@ -281,7 +281,7 @@ class ExecTrace():
         indent = "LABEL_%04X: " % next_addr
         data = []
         for addr in range(next_addr, codeblock.start):
-          data.append("0x%02X" % ord(self.rom[self.rombank + addr]))
+          data.append("0x%02X" % self.rom[self.rombank + addr])
           if len(data) == 8:
             asm.write("{}db {}\n".format(indent, ", ".join(data)))
             indent = "            "
