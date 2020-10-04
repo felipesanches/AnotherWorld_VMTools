@@ -75,10 +75,16 @@ def main():
     bank.seek(entry["bankOffset"])
     data = bank.read(entry["packedSize"])
     if entry["packedSize"] != entry["size"]:
-      data = Unpacker(data).unpack(entry["packedSize"])
+      unpacker = Unpacker(data)
+      success = unpacker.unpack(entry["packedSize"])
 
-    if len(data) > 0:
-      open(os.path.join(output_dir, "resource-0x%02.bin" % resource_index)).write(data)
+    if not success:
+      print ("ERROR: Failed to unpack data.")
+    else:
+      bin_filename = os.path.join(output_dir,
+                                  f"resource-0x{resource_index+1:02x}.bin")
+      unpacker.buffer.seek(0)
+      open(bin_filename, "wb").write(unpacker.buffer.read())
     bank.close()
 
 
