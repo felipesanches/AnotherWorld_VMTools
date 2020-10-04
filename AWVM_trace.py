@@ -36,7 +36,7 @@ def register_cinematic_entry(x, y, zoom, address):
   if address in cinematic_entries.keys():
     return cinematic_entries[address]["label"]
 
-  label = "LEVEL_%d_CINEMATIC_%03d" % (game_level, cinematic_counter) 
+  label = "LEVEL_%d_CINEMATIC_%03d" % (game_level, cinematic_counter)
   cinematic_counter += 1
   cinematic_entries[address] = {
     'x': x,
@@ -66,10 +66,10 @@ def register_video2_entry(x, y, zoom, address):
 def print_video_entries():
   for addr in sorted(cinematic_entries.keys()):
     v = cinematic_entries[addr]
-    print "CINEMATIC: 0x%04X x:%s y:%s zoom:%s" % (addr, v['x'], v['y'], v['zoom'])
+    print (f"CINEMATIC: 0x{addr:04X} x:{v['x']} y:{v['y']} zoom:{v['zoom']}")
   for addr in sorted(video2_entries.keys()):
     v = video2_entries[addr]
-    print "VIDEO2: 0x%04X x:%s y:%s zoom:%s" % (addr, v['x'], v['y'], v['zoom'])
+    print (f"VIDEO2: 0x{addr:04X} x:{v['x']} y:{v['y']} zoom:{v['zoom']}")
 
 SPECIAL_PURPOSE_VARS = {
   0x3c: "RANDOM_SEED",
@@ -384,7 +384,7 @@ def visited_pdata(addr):
       read during extraction of the artwork data."""
   global used_pdata
   if addr not in used_pdata:
-    used_pdata.append(addr) 
+    used_pdata.append(addr)
 
 def print_unused_polygon_data():
   """Prints which ranges of the polygon data have
@@ -400,11 +400,11 @@ def print_unused_polygon_data():
         end = addr
     else:
       if state == 1:
-        print ("{}-{} ({})".format(hex(start), hex(end), end-start+1))
+        print (f"{hex(start)}-{hex(end)} ({(end-start+1)})")
         state = 0
   if state == 1:
     end = max_addr
-    print ("{}-{} ({})".format(hex(start), hex(end), end-start+1))
+    print (f"{hex(start)}-{hex(end)} ({(end-start+1)})")
 
 game_level = None
 polygon_data = None
@@ -426,7 +426,7 @@ def fillPolygon(c, zoom, color, cx, cy):
   #print("        -> {} points polygon".format(numPoints))
 
   if not ((numPoints & 1) == 0 and numPoints < MAX_POINTS):
-    print "error: numPoints = {}".format(numPoints)
+    print (f"error: numPoints = {numPoints}")
     sys.exit(-1)
 
   #Read all points, directly from bytecode segment
@@ -447,7 +447,7 @@ def readAndDrawPolygon(c, color, zoom, x, y):
   global pdata_offset
 
   value = fetch_polygon_data()
-    
+
   if value >= 0xC0:
     if color & 0x80:
       color = value & 0x3F
@@ -478,7 +478,7 @@ def readAndDrawPolygonHierarchy(c, zoom, pgc_x, pgc_y):
     po_x = pt_x + (fetch_polygon_data() * float(zoom) / DEFAULT_ZOOM)
     po_y = pt_y + (fetch_polygon_data() * float(zoom) / DEFAULT_ZOOM)
     #print "child #{}: offset={} ({}) po_x={} po_y={}".format(
-    #  child, 
+    #  child,
     #  hex((2*offset) & 0xFFFF), hex(offset),
     #  po_x, po_y)
 
@@ -557,7 +557,7 @@ else:
   gamerom = "{}/bytecode.rom".format(romset_dir)
   makedir(OUTPUT_DIR)
   for game_level in range(9):
-    print "disassembling level {}...".format(game_level)
+    print (f"disassembling level {game_level}...")
     trace = AWVM_Trace(gamerom, rombank=0x10000*game_level, loglevel=0)
     trace.run()
 #    trace.print_ranges()
@@ -567,7 +567,7 @@ else:
     level_path = "%s/level_%s" % (OUTPUT_DIR, game_level)
     makedir(level_path)
     trace.save_disassembly_listing("{}/level-{}.asm".format(level_path, game_level))
-    print "\t{} cinematic entries.".format(len(cinematic_entries.keys()))
+    print (f"\t{len(cinematic_entries.keys())} cinematic entries.")
     # cinematic polygon data:
     used_pdata = []
     extract_polygon_data(romset_dir, True)
@@ -575,7 +575,7 @@ else:
 
 
   # common polygon data:
-  print "\t{} video2 entries.".format(len(video2_entries.keys()))
+  print (f"\t{len(video2_entries.keys())} video2 entries.")
   extract_polygon_data(romset_dir, False)
 
 
