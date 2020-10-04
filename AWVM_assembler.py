@@ -52,7 +52,7 @@ def byte(v):
       v = symbols[v]
     else:
       v = 0
-  rom.write(chr(v))
+  rom.write(bytes([v]))
 
 def word(v, negative=False):
   if v in symbols:
