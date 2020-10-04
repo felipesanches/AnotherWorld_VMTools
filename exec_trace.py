@@ -217,7 +217,7 @@ class ExecTrace():
 
   def fetch(self):
     value = self.rom[self.rombank + self.PC]
-    self.log(DEBUG, "Fetch at {}: {}".format(hex(self.PC), hex(value)))
+    self.log(DEBUG, f"Fetch at {hex(self.PC)}: {hex(value)}")
     if self.increment_PC() == -1:
       return -1
     return value
@@ -281,19 +281,19 @@ class ExecTrace():
         indent = "LABEL_%04X: " % next_addr
         data = []
         for addr in range(next_addr, codeblock.start):
-          data.append("0x%02X" % self.rom[self.rombank + addr])
+          data.append(f"0x{self.rom[self.rombank + addr]:02X}")
           if len(data) == 8:
-            asm.write("{}db {}\n".format(indent, ", ".join(data)))
+            asm.write(f"{indent}db {', '.join(data)}\n")
             indent = "            "
             data = []
         if len(data) > 0:
-          asm.write("{}db {}\n".format(indent, ", ".join(data)))
+          asm.write(f"{indent}db {', '.join(data)}\n")
 
       address = codeblock.start
       indent = "LABEL_%04X: " % address
       for address in range(codeblock.start, codeblock.end+1):
         if address in self.disasm:
-          asm.write("%s%s\n" % (indent, self.disasm[address]))
+          asm.write(f"{indent}{self.disasm[address]}\n")
           indent = "            "
       next_addr = codeblock.end + 1
     asm.close()

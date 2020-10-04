@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 from exec_trace import ExecTrace
 OUTPUT_DIR = "output"
@@ -14,7 +14,7 @@ VIDEO2=0 # shared polygon resource
 CINEMATIC=1 # level-specific bank of polygonal data
 
 def get_text_string(str_id):
-  str_index = open("{}/str_index.rom".format(romset_dir), "rb")
+  str_index = open(f"{romset_dir}/str_index.rom", "rb")
   str_index.seek((str_id-1)*2)
   str_index.read(1)
   index = ord(str_index.read(1))
@@ -505,22 +505,31 @@ def extract_polygon_data(romset_dir, cinematic):
   global game_level
 
   if cinematic:
-    polygon_data = open("{}/cinematic.rom".format(romset_dir)).read()
+    try:
+      polygon_data = open(f"{romset_dir}/cinematic.rom", "rb").read()
+    except:
+      print("FIXME! Did not find a cinematic.rom file...")
+      return
     entries = cinematic_entries
-    level_path = "%s/level_%s" % (OUTPUT_DIR, game_level)
-    dirpath = "%s/cinematic/" % (level_path)
+    level_path = f"{OUTPUT_DIR}/level_{game_level}"
+    dirpath = f"{level_path}/cinematic/"
     makedir(level_path)
   else:
-    polygon_data = open("{}/video2.rom".format(romset_dir)).read()
+    try:
+      polygon_data = open(f"{romset_dir}/video2.rom", "rb").read()
+    except:
+      print("FIXME! Did not find a video2.rom file...")
+      return
+
     entries = video2_entries
-    dirpath = "%s/common_video/" % (OUTPUT_DIR)
+    dirpath = f"{OUTPUT_DIR}/common_video/"
     game_level = 0
 
   makedir(dirpath)
 
   for addr in entries.keys():
     entry = entries[addr]
-    s = SVGSurface("%s/%s.svg" % (dirpath, entry['label']), 320, 200)
+    s = SVGSurface(f"{dirpath}/{entry['label']}.svg", 320, 200)
     c = Context(s)
     zoom = entry["zoom"]
     x = entry["x"]
@@ -550,11 +559,11 @@ def makedir(path):
 
 import sys
 if len(sys.argv) != 2:
-  print("usage: {} <romset_dir>".format(sys.argv[0]))
+  print(f"usage: {sys.argv[0]} <romset_dir>")
 else:
   romset_dir = sys.argv[1]
-  str_data = open("{}/str_data.rom".format(romset_dir), "rb").read()
-  gamerom = "{}/bytecode.rom".format(romset_dir)
+  str_data = open(f"{romset_dir}/str_data.rom", "rb").read()
+  gamerom = f"{romset_dir}/bytecode.rom"
   makedir(OUTPUT_DIR)
   for game_level in range(9):
     print (f"disassembling level {game_level}...")
@@ -564,9 +573,9 @@ else:
 #    trace.print_grouped_ranges()
 #    print_video_entries()
 
-    level_path = "%s/level_%s" % (OUTPUT_DIR, game_level)
+    level_path = f"{OUTPUT_DIR}/level_{game_level}"
     makedir(level_path)
-    trace.save_disassembly_listing("{}/level-{}.asm".format(level_path, game_level))
+    trace.save_disassembly_listing(f"{level_path}/level-{game_level}.asm")
     print (f"\t{len(cinematic_entries.keys())} cinematic entries.")
     # cinematic polygon data:
     used_pdata = []
