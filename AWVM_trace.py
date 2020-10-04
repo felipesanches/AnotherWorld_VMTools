@@ -22,8 +22,8 @@ def get_text_string(str_id):
   str_index.close()
 
   the_string = ""
-  while ord(str_data[index]) != 0x00:
-    c = str_data[index]
+  while str_data[index] != 0x00:
+    c = chr(str_data[index])
     if c == '\n':
       c = "\\n"
     the_string += c
