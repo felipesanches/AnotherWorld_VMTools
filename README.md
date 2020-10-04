@@ -1,7 +1,16 @@
-# AnotherWorld_VMTools
+# Another World VM Tools
+
 - Toolchain for software development targeting the virtual machine originally designed for Eric Chahi's Another World game.
 - The scripts in this repo are Licensed under the GPL version 2 or later
 - All scripts require Python 3.
+
+## Requirements
+
+- copy of Another World (Out Of This World) MSDOS version
+- python version 3 installed
+- pip installed (python 3 package installation system). Do verify this item for your plataform.
+
+## Scripts Descriptions and Use
 
 ### banks2resources.py
 - Reads compressed game data files such as "msdos_release/bank*"
@@ -23,3 +32,10 @@
 ### build_and_run.sh
 - Helper shell script that builds an assembly source tree, copies the generated ROM files to the MAME rompath and executes the emulator.
 - This script needs to be tweaked to use the directory paths of your project files, MAME executable, etc...
+
+## Development
+
+### Create Your Virtual Env.
+- pip install virtualenv
+- virtualenv -p python3(or path to your python3 binary) .env(or whatever directory that you prefer)
+- pip install -r requirements.txt
