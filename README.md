@@ -3,12 +3,12 @@
 - The scripts in this repo are Licensed under the GPL version 2 or later
 - All scripts require Python 3.
 
-### banks2resources
+### banks2resources.py
 - Reads compressed game data files such as "msdos_release/bank*"
 - Outputs raw binary files called "resource-0x*.bin"
 - These are the files used by the MAME driver at https://github.com/felipesanches/mame/commit/1b943d2264b8d536b1815d8d21ef6234bb586b13
 
-### resources2romset
+### resources2romset.py
 - Packs together resource files into ROM files.
 - This is also useful for https://github.com/felipesanches/AnotherWorld_FPGA
 
