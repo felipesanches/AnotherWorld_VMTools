@@ -316,13 +316,13 @@ def generate_graph():
   for block in self.visited_ranges:
     for nb in block.next_block:
       if nb is str:
-	print nb  # this must be an illegal instruction
+        print (nb)  # this must be an illegal instruction
       else:
-	if nb in graph_dict.keys():
-	  edge = pydotplus.graphviz.Edge(graph_dict[block.start], graph_dict[nb])
-	  graph.add_edge(edge)
-	else:
-	  print "Missing codeblock: {}".format(hex(nb))
+        if nb in graph_dict.keys():
+          edge = pydotplus.graphviz.Edge(graph_dict[block.start], graph_dict[nb])
+          graph.add_edge(edge)
+        else:
+          print (f"Missing codeblock: {hex(nb)}")
 
   open("output.gv", "w").write(graph.to_string())
 
