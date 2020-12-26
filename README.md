@@ -35,7 +35,7 @@
 
 ## Development
 
-### Create Your Virtual Env.
-- pip install virtualenv
-- virtualenv -p python3(or path to your python3 binary) .env(or whatever directory that you prefer)
+### Create and activate your virtual environment
+- virtualenv venv -p python3
+- source venv/bin/activate
 - pip install -r requirements.txt
