@@ -147,7 +147,8 @@ class ExecTrace():
                        end=self.PC-1,
                        exit=["Illegal Opcode: {}".format(hex(opcode))])
         self.log(ERROR, "[{}] ILLEGAL: {}".format(hex(self.PC-1), hex(opcode)))
-        sys.exit(-1)
+        self.PC = None  # This will finish the crawling
+        # sys.exit(-1)
 
 ### Private methods for computing the code-execution graph structure ###
     def already_visited(self, address):
@@ -228,7 +229,7 @@ class ExecTrace():
             print(msg)
 
     def log_status(self):
-        self.log(VERBOSE, "Pending: {}".format(map(hex, self.pending_entry_points)))
+        self.log(VERBOSE, "Pending: {}".format(list(map(hex, self.pending_entry_points))))
 
     def log_ranges(self):
         results = []

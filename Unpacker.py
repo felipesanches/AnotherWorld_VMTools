@@ -47,8 +47,9 @@ class Unpacker():
         self.datasize -= count
         while count:
             count -= 1
+            value = self.getCode(8)
             self.buffer.seek(self.output_idx)
-            self.buffer.write(bytes([self.getCode(8)]))
+            self.buffer.write(bytes([value]))
             self.output_idx -= 1
 
     def decUnk2(self, numChunks):

@@ -52,6 +52,12 @@ def read_msdos_memlist(memlist_filename):
             mem_entries.append(entry)
 
 
+def get_type(i):
+    if i==5:
+        return "BYTECODE"
+    else:
+        return i
+
 def main():
     if len(sys.argv) != 3:
         print (f"usage: {sys.argv[0]} <memlist.bin> <output_dir>\n")
@@ -66,7 +72,7 @@ def main():
     entries = read_msdos_memlist(memlist_filename)
     for resource_index, entry in enumerate(entries):
         if entry != None:
-            print (f"id:{entry['bankId']}\ttype:{entry['type']}"
+            print (f"id:{entry['bankId']}\ttype:{get_type(entry['type'])}"
                    f"\toffset:{hex(entry['bankOffset'])}"
                    f"\tsize:{entry['packedSize']}/{entry['size']}")
 

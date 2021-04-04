@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from exec_trace import ExecTrace
-OUTPUT_DIR = "output"
+output_dir = ""
 game_level = None
 cinematic_counter = 0
 video2_counter = 0
@@ -14,21 +14,26 @@ VIDEO2=0 # shared polygon resource
 CINEMATIC=1 # level-specific bank of polygonal data
 
 def get_text_string(str_id):
-    str_index = open(f"{romset_dir}/str_index.rom", "rb")
-    str_index.seek((str_id-1)*2)
-    str_index.read(1)
-    index = ord(str_index.read(1))
-    index = index << 8 | ord(str_index.read(1))
-    str_index.close()
+    try:
+        if not str_data:
+            str_data = open(f"{romset_dir}/str_data.rom", "rb").read()
 
-    the_string = ""
-    while str_data[index] != 0x00:
-        c = chr(str_data[index])
-        if c == '\n':
-            c = "\\n"
-        the_string += c
-        index += 1
+        str_index = open(f"{romset_dir}/str_index.rom", "rb")
+        str_index.seek((str_id-1)*2)
+        str_index.read(1)
+        index = ord(str_index.read(1))
+        index = index << 8 | ord(str_index.read(1))
+        str_index.close()
 
+        the_string = ""
+        while str_data[index] != 0x00:
+            c = chr(str_data[index])
+            if c == '\n':
+                c = "\\n"
+            the_string += c
+            index += 1
+    except:
+        the_string = f"string_{str_id}"
     return the_string
 
 def register_cinematic_entry(x, y, zoom, address):
@@ -411,7 +416,11 @@ polygon_data = None
 pdata_offset = 0
 def fetch_polygon_data():
     global pdata_offset
-    value = ord(polygon_data[game_level << 16 | pdata_offset])
+    try:
+        value = polygon_data[game_level << 16 | pdata_offset]
+    except:
+        print ("ERROR: exception on fetch_polygon_data() FIXME!")
+        return 0
     # visited_pdata(pdata_offset)
     pdata_offset += 1
     return value
@@ -427,7 +436,7 @@ def fillPolygon(c, zoom, color, cx, cy):
 
     if not ((numPoints & 1) == 0 and numPoints < MAX_POINTS):
         print (f"error: numPoints = {numPoints}")
-        sys.exit(-1)
+        return # FIXME! sys.exit(-1)
 
     #Read all points, directly from bytecode segment
     for i in range(numPoints):
@@ -461,7 +470,7 @@ def readAndDrawPolygon(c, color, zoom, x, y):
             readAndDrawPolygonHierarchy(c, zoom, x, y)
         else:
             print("ERROR: readAndDrawPolygon() (value != 2)\n")
-            sys.exit(-1)
+            return # FIXME! sys.exit(-1)
 
 def readAndDrawPolygonHierarchy(c, zoom, pgc_x, pgc_y):
     global pdata_offset
@@ -511,7 +520,7 @@ def extract_polygon_data(romset_dir, cinematic):
             print("FIXME! Did not find a cinematic.rom file...")
             return
         entries = cinematic_entries
-        level_path = f"{OUTPUT_DIR}/level_{game_level}"
+        level_path = f"{output_dir}/level_{game_level}"
         dirpath = f"{level_path}/cinematic/"
         makedir(level_path)
     else:
@@ -522,7 +531,7 @@ def extract_polygon_data(romset_dir, cinematic):
             return
 
         entries = video2_entries
-        dirpath = f"{OUTPUT_DIR}/common_video/"
+        dirpath = f"{output_dir}/common_video/"
         game_level = 0
 
     makedir(dirpath)
@@ -558,13 +567,13 @@ def makedir(path):
         os.mkdir(path)
 
 import sys
-if len(sys.argv) != 2:
-    print(f"usage: {sys.argv[0]} <romset_dir>")
+if len(sys.argv) != 3:
+    print(f"usage: {sys.argv[0]} <romset_dir> <disasm_output_dir>")
 else:
     romset_dir = sys.argv[1]
-    str_data = open(f"{romset_dir}/str_data.rom", "rb").read()
+    output_dir = sys.argv[2]
     gamerom = f"{romset_dir}/bytecode.rom"
-    makedir(OUTPUT_DIR)
+    makedir(output_dir)
     for game_level in range(9):
         print (f"disassembling level {game_level}...")
         trace = AWVM_Trace(gamerom, rombank=0x10000*game_level, loglevel=0)
@@ -573,7 +582,7 @@ else:
 #    trace.print_grouped_ranges()
 #    print_video_entries()
 
-        level_path = f"{OUTPUT_DIR}/level_{game_level}"
+        level_path = f"{output_dir}/level_{game_level}"
         makedir(level_path)
         trace.save_disassembly_listing(f"{level_path}/level-{game_level}.asm")
         print (f"\t{len(cinematic_entries.keys())} cinematic entries.")
