@@ -23,4 +23,4 @@ cp $SRC/level_6/level-6.bin $TARGET/resource-0x27.bin
 cp $SRC/level_7/level-7.bin $TARGET/resource-0x2a.bin
 cp $SRC/level_8/level-8.bin $TARGET/resource-0x7e.bin
 
-$MAME -rp $ROMS aw_msdos -window ;-debug
+$MAME -rp $ROMS aw_msdos -window #-debug
