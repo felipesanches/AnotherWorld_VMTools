@@ -36,12 +36,32 @@ def get_text_string(str_id):
         the_string = f"string_{str_id}"
     return the_string
 
+LABELED_CINEMATIC_ENTRIES = {
+    0x9ADC: "SLUG_0",
+    0x9B04: "SLUG_1",
+    0x9B30: "SLUG_2",
+    0x9B60: "SLUG_3",
+    0x9B90: "SLUG_4",
+    0x9BC0: "SLUG_5",
+    0x9BF0: "SLUG_6",
+    0x9C20: "SLUG_7",
+    0x9C50: "SLUG_8",
+    0x9C80: "SLUG_9",
+    0x9CB0: "SLUG_10",
+    0x9CE0: "SLUG_11",
+    0x9D10: "SLUG_12",
+    0x9D3C: "SLUG_13"
+}
+
 def register_cinematic_entry(x, y, zoom, address):
     global cinematic_counter
     if address in cinematic_entries.keys():
         return cinematic_entries[address]["label"]
 
-    label = "LEVEL_%d_CINEMATIC_%03d" % (game_level, cinematic_counter)
+    if address in LABELED_CINEMATIC_ENTRIES:
+        label = "LEVEL_%d_CINEMATIC_%s" % (game_level, LABELED_CINEMATIC_ENTRIES[address])
+    else:
+        label = "LEVEL_%d_CINEMATIC_%03d" % (game_level, cinematic_counter)
     cinematic_counter += 1
     cinematic_entries[address] = {
         'x': x,

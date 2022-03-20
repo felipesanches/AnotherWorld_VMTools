@@ -92,6 +92,7 @@ class ExecTrace():
             opcode = self.fetch()
             if opcode != -1:
                 self.disasm[address] = self.disasm_instruction(opcode)
+                self.log(DEBUG, hex(address) + ": " + self.disasm[address])
 
 ### Methods for declaring the behaviour of branching instructions ###
     def subroutine(self, address):

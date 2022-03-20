@@ -12,6 +12,14 @@
 
 ## Scripts Descriptions and Use
 
+The simples way to use this to get bytecode disasm (assuming you have a copy of the game files for MSDOS saved on the `msdos_release` directory) is to perform the following commands:
+
+ > `./banks2resources.py msdos_release/memlist.bin resources/`
+ > `./resources2romset.py resources/ romset/`
+ > `./AWVM_trace.py romset/ disasm/`
+
+Below is a more detailed descriptioni of each individual script:
+
 ### banks2resources.py
 - Reads compressed game data files such as "msdos_release/bank*"
 - Outputs raw binary files called "resource-0x*.bin"

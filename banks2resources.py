@@ -47,16 +47,24 @@ def read_msdos_memlist(memlist_filename):
         entry = read_mem_entry(memlist, i)
         if entry["bankOffset"] == 0xFFFFFFFF:
             return mem_entries
+        mem_entries.append(entry)
         i += 1
-        if entry["packedSize"] != 0:
-            mem_entries.append(entry)
 
 
 def get_type(i):
-    if i==5:
-        return "BYTECODE"
+    res_types = [
+        "SOUND",
+        "MUSIC",
+        "POLY_ANIM",
+        "PALETTE",
+        "BYTECODE",
+        "POLY_CINEM"] # poly_cinematic
+
+    if i < len(res_types):
+        return res_types[i]
     else:
-        return i
+        return f"UNKNOWN({i})"
+
 
 def main():
     if len(sys.argv) != 3:
@@ -70,9 +78,12 @@ def main():
 
     directory = os.path.dirname(memlist_filename)
     entries = read_msdos_memlist(memlist_filename)
+
     for resource_index, entry in enumerate(entries):
         if entry != None:
-            print (f"id:{entry['bankId']}\ttype:{get_type(entry['type'])}"
+            print (f"resource:{hex(resource_index)}"
+                   f"\tbankId:{entry['bankId']}"
+                   f"\ttype:{get_type(entry['type'])}"
                    f"\toffset:{hex(entry['bankOffset'])}"
                    f"\tsize:{entry['packedSize']}/{entry['size']}")
 
@@ -80,17 +91,24 @@ def main():
         bank = open(bank_file, "rb")
         bank.seek(entry["bankOffset"])
         data = bank.read(entry["packedSize"])
+        unpacker = Unpacker(data)
+
         if entry["packedSize"] != entry["size"]:
-            unpacker = Unpacker(data)
             success = unpacker.unpack(entry["packedSize"])
+        else:
+            success = True
 
         if not success:
             print ("ERROR: Failed to unpack data.")
         else:
             bin_filename = os.path.join(output_dir,
-                                        f"resource-0x{resource_index+1:02x}.bin")
+                                        f"resource-0x{resource_index:02x}.bin")
             unpacker.buffer.seek(0)
-            open(bin_filename, "wb").write(unpacker.buffer.read())
+            data = unpacker.buffer.read()
+            if entry['size'] != len(data):
+                print (f"SHOULD BE {entry['size']} ---- GOT {len(data)}")
+                sys.exit(-1)
+            open(bin_filename, "wb").write(data)
         bank.close()
 
 

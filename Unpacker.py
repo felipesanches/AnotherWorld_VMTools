@@ -17,6 +17,7 @@ class Unpacker():
         self.index = packedSize - 4
         self.size = 0
         self.datasize = self.READ_BE_UINT32()
+#        print(f"0:__{self.datasize:08X}__")
         self.output_idx = self.datasize - 1
         self.crc = self.READ_BE_UINT32()
         self.chk = self.READ_BE_UINT32()
@@ -43,16 +44,19 @@ class Unpacker():
                 return self.crc == 0
 
     def decUnk1(self, numChunks, addCount):
+#        print(f"1: {numChunks}_{addCount}")
         count = self.getCode(numChunks) + addCount + 1
         self.datasize -= count
         while count:
             count -= 1
             value = self.getCode(8)
+#            print(f"1v: {value}")
             self.buffer.seek(self.output_idx)
             self.buffer.write(bytes([value]))
             self.output_idx -= 1
 
     def decUnk2(self, numChunks):
+#        print(f"2: {numChunks}")
         i = self.getCode(numChunks)
         count = self.size + 1
         self.datasize -= count;
@@ -60,6 +64,7 @@ class Unpacker():
             count -= 1
             self.buffer.seek(self.output_idx + i)
             value = self.buffer.read(1)
+#            print(f"2v: {value[0]}")
             self.buffer.seek(self.output_idx)
             self.buffer.write(value)
             self.output_idx -= 1
