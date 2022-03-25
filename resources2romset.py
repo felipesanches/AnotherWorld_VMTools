@@ -37,6 +37,25 @@ cinematic_resource_ids = [
 video2_resource_id = 0x11
 
 
+def generate_text_and_font_data_roms():
+    '''
+        FIXME: This should ideally be extracted from the original game files
+        but we currently don't know how to do it, so we keep these hardcoded
+        ROM files which where put together based on the hardcoded data found
+        in the Adrien Sanglard's VM codebase:
+        https://github.com/fabiensanglard/Another-World-Bytecode-Interpreter
+
+        See also:
+        https://github.com/felipesanches/AnotherWorld_VMTools/issues/15
+    '''
+    import shutil
+    for filename in ['anotherworld_chargen.rom',
+                     'str_data.rom',
+                     'str_index.rom']:
+        shutil.copyfile(f'hardcoded_data/{filename}',
+                        f'{output_dir}/{filename}')
+
+
 def generate_bytecode_rom():
     bytecode_rom = open(f"{output_dir}/bytecode.rom", "wb")
     for res in bytecode_resource_ids:
@@ -140,4 +159,4 @@ generate_bytecode_rom()
 generate_palettes_rom()
 generate_cinematic_rom()
 generate_video2_rom()
-
+generate_text_and_font_data_roms()

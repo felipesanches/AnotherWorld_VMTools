@@ -3,7 +3,7 @@
 - Toolchain for software development targeting the virtual machine originally designed for Eric Chahi's Another World game.
 - The scripts in this repo are Licensed under the GPL version 2 or later
 - All scripts require Python 3.
-- There's a MAME fork with an implementation of the Another World VM available at https://github.com/felipesanches/mame/tree/anotherworld which can be used to run any "romset" compiled with the assembler provided by this toolchain.
+- There's a MAME fork with an implementation of the Another World VM available at https://github.com/felipesanches/mame/tree/anotherworld which can be used to run any "romset" compiled with the assembler provided by this toolchain. (**Note:** Do not forget to also copy the text-string and font ROMs from the `hardcoded_data` directory to your MAME rompath when running the driver - See also: issue #15)
 
 ## Scripts Descriptions and Use
 
