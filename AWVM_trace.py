@@ -13,7 +13,9 @@ str_data = None
 VIDEO2=0 # shared polygon resource
 CINEMATIC=1 # level-specific bank of polygonal data
 
+
 def get_text_string(str_id):
+    global str_data
     try:
         if not str_data:
             str_data = open(f"{romset_dir}/str_data.rom", "rb").read()
@@ -36,6 +38,7 @@ def get_text_string(str_id):
         the_string = f"string_{str_id}"
     return the_string
 
+
 LABELED_CINEMATIC_ENTRIES = {
     0x9ADC: "SLUG_0",
     0x9B04: "SLUG_1",
@@ -52,6 +55,7 @@ LABELED_CINEMATIC_ENTRIES = {
     0x9D10: "SLUG_12",
     0x9D3C: "SLUG_13"
 }
+
 
 def register_cinematic_entry(x, y, zoom, address):
     global cinematic_counter
@@ -96,6 +100,7 @@ def print_video_entries():
         v = video2_entries[addr]
         print (f"VIDEO2: 0x{addr:04X} x:{v['x']} y:{v['y']} zoom:{v['zoom']}")
 
+
 SPECIAL_PURPOSE_VARS = {
     0x3c: "RANDOM_SEED",
     0x54: "HACK_VAR_54",
@@ -119,8 +124,10 @@ def getVariableName(value):
     else:
         return "0x%02X" % value
 
+
 def get_label(addr):
     return "LABEL_%04X" % addr
+
 
 class AWVM_Trace(ExecTrace):
     def output_disasm_headers(self):
