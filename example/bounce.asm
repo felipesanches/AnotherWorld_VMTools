@@ -1,4 +1,4 @@
-BALL_IMAGE    EQU 0x031E ; This is the address of one of the code wheel symbols.
+BALL_IMAGE    EQU 0x031E ; This is the address of one of the code wheel symbols. (LEVEL_0_CINEMATIC_067)
 CINEMATIC     EQU 1
 
 ; These are the VM vars we'll use:

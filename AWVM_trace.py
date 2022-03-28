@@ -40,6 +40,74 @@ def get_text_string(str_id):
 
 
 LABELED_CINEMATIC_ENTRIES = {
+  1: {
+    0x0F72: "WALKING_FEET_ARRIVING_0",
+    0x0F7E: "WALKING_FEET_ARRIVING_1",
+    0x0FA2: "WALKING_FEET_ARRIVING_2",
+    0x0FCA: "WALKING_FEET_ARRIVING_3",
+    0x0FF2: "WALKING_FEET_ARRIVING_4",
+    0x101A: "WALKING_FEET_ARRIVING_5",
+    0x1048: "WALKING_FEET_ARRIVING_6",
+    0x105E: "WALKING_FEET_ARRIVING_7",
+    0x1082: "WALKING_FEET_ARRIVING_8",
+    0x10B6: "WALKING_FEET_ARRIVING_9",
+    0x10E2: "WALKING_FEET_ARRIVING_10",
+    0x10E2: "WALKING_FEET_ARRIVING_11",
+    0x110A: "WALKING_FEET_ARRIVING_12",
+    0x113E: "WALKING_FEET_ARRIVING_13",
+    0x1158: "WALKING_FEET_ARRIVING_14", 
+    0x117E: "WALKING_FEET_ARRIVING_15",
+    0x11AC: "WALKING_FEET_ARRIVING_16",
+    0x11C6: "WALKING_FEET_ARRIVING_17",
+    0x1200: "WALKING_FEET_ARRIVING_18",
+    0x122A: "WALKING_FEET_ARRIVING_19",
+    0x1278: "WALKING_FEET_ARRIVING_20",
+    0x1292: "WALKING_FEET_ARRIVING_21",
+    0x12AC: "WALKING_FEET_ARRIVING_22",
+    0x12F2: "WALKING_FEET_ARRIVING_23",
+    0x130C: "WALKING_FEET_ARRIVING_24",
+    0x1326: "WALKING_FEET_ARRIVING_25",
+    0x1340: "WALKING_FEET_ARRIVING_26",
+    0x135A: "WALKING_FEET_ARRIVING_27",
+    0x1374: "WALKING_FEET_ARRIVING_28",
+    0x13EA: "WALKING_FEET_ARRIVING_29",
+    0x1404: "WALKING_FEET_ARRIVING_30",
+    0x141E: "WALKING_FEET_ARRIVING_31",
+    0x143C: "WALKING_FEET_ARRIVING_32",
+    0x145A: "WALKING_FEET_ARRIVING_33",
+    0x1478: "WALKING_FEET_ARRIVING_34",
+    0x14F6: "WALKING_FEET_ARRIVING_35",
+    0x1514: "WALKING_FEET_ENTERING_0",
+    0x1532: "WALKING_FEET_ENTERING_1",
+    0x1584: "WALKING_FEET_ENTERING_2",
+    0x15B6: "WALKING_FEET_ENTERING_3",
+    0x15D0: "WALKING_FEET_ENTERING_4",
+    0x15EA: "WALKING_FEET_ENTERING_5",
+    0x1658: "WALKING_FEET_ENTERING_6",
+    0x166A: "WALKING_FEET_ENTERING_7",
+    0x16A2: "WALKING_FEET_ENTERING_8",
+    0x16EA: "WALKING_FEET_ENTERING_9",
+    0x1712: "WALKING_FEET_ENTERING_10",
+    0xF6D2: "CARKEY",
+    0xF7D8: "DNA_0",
+    0xF7EA: "DNA_1",
+    0xF7FC: "DNA_2",
+    0xF810: "DNA_3",
+    0xF822: "DNA_4",
+    0xF834: "DNA_5",
+    0xF848: "DNA_6",
+    0xF85C: "DNA_7",
+    0xF870: "DNA_8",
+    0xF880: "DNA_9",
+    0xF894: "DNA_10",
+    0xF8A8: "DNA_11",
+    0xF8BC: "DNA_12",
+    0xF8D0: "DNA_13",
+    0xF8E2: "DNA_14",
+    0xF8F4: "DNA_15",
+    0xF906: "DNA_16",
+  },
+  2: {
     0x9ADC: "SLUG_0",
     0x9B04: "SLUG_1",
     0x9B30: "SLUG_2",
@@ -54,20 +122,22 @@ LABELED_CINEMATIC_ENTRIES = {
     0x9CE0: "SLUG_11",
     0x9D10: "SLUG_12",
     0x9D3C: "SLUG_13"
+  },
 }
 
 
-def register_cinematic_entry(x, y, zoom, address):
+def register_cinematic_entry(x, y, palette_number, zoom, address):
     global cinematic_counter
     if address in cinematic_entries.keys():
         return cinematic_entries[address]["label"]
 
-    if address in LABELED_CINEMATIC_ENTRIES:
-        label = "LEVEL_%d_CINEMATIC_%s" % (game_level, LABELED_CINEMATIC_ENTRIES[address])
+    if game_level in LABELED_CINEMATIC_ENTRIES.keys() and address in LABELED_CINEMATIC_ENTRIES[game_level]:
+        label = "LEVEL_%d_CINEMATIC_%s" % (game_level, LABELED_CINEMATIC_ENTRIES[game_level][address])
     else:
         label = "LEVEL_%d_CINEMATIC_%03d" % (game_level, cinematic_counter)
     cinematic_counter += 1
     cinematic_entries[address] = {
+        'palette_number': palette_number,
         'x': x,
         'y': y,
         'zoom': zoom,
@@ -76,7 +146,7 @@ def register_cinematic_entry(x, y, zoom, address):
     return label
 
 
-def register_video2_entry(x, y, zoom, address):
+def register_video2_entry(x, y, palette_number, zoom, address):
     global video2_counter
     if address in video2_entries.keys():
         return video2_entries[address]["label"]
@@ -84,6 +154,7 @@ def register_video2_entry(x, y, zoom, address):
     label = "COMMON_VIDEO_%03d" % (video2_counter)
     video2_counter += 1
     video2_entries[address] = {
+        'palette_number': palette_number,
         'x': x,
         'y': y,
         'zoom': zoom,
@@ -95,10 +166,10 @@ def register_video2_entry(x, y, zoom, address):
 def print_video_entries():
     for addr in sorted(cinematic_entries.keys()):
         v = cinematic_entries[addr]
-        print (f"CINEMATIC: 0x{addr:04X} x:{v['x']} y:{v['y']} zoom:{v['zoom']}")
+        print (f"label:{v['label']}: CINEMATIC: 0x{addr:04X} x:{v['x']} y:{v['y']} zoom:{v['zoom']}")
     for addr in sorted(video2_entries.keys()):
         v = video2_entries[addr]
-        print (f"VIDEO2: 0x{addr:04X} x:{v['x']} y:{v['y']} zoom:{v['zoom']}")
+        print (f"label:{v['label']}: VIDEO2: 0x{addr:04X} x:{v['x']} y:{v['y']} zoom:{v['zoom']}")
 
 
 SPECIAL_PURPOSE_VARS = {
@@ -124,7 +195,8 @@ def getVariableName(value):
     else:
         return "0x%02X" % value
 
-
+# TODO: KNOWN LABELS
+# level 1, 0x0219 = DNA_ANIMATION
 def get_label(addr):
     return "LABEL_%04X" % addr
 
@@ -145,13 +217,14 @@ class AWVM_Trace(ExecTrace):
             header += "%s\t\tEQU 0x%04X\n" % (v['label'], addr)
         return header
 
+
     def disasm_instruction(self, opcode):
         if (opcode & 0x80) == 0x80:  # VIDEO
             offset = (((opcode & 0x7F) << 8) | self.fetch()) * 2
             x = self.fetch()
             y = self.fetch()
             #print("found video_entry {} at PC={}".format(hex(offset), hex(self.PC)))
-            label = register_cinematic_entry(x, y, "0x40", offset)
+            label = register_cinematic_entry(x, y, self.current_palette_number, "0x40", offset)
             return "video type=%d, offset=%s, x=%d, y=%d" % (CINEMATIC, label, x, y)
 
         elif (opcode & 0x40) == 0x40: # VIDEO
@@ -195,10 +268,10 @@ class AWVM_Trace(ExecTrace):
                     zoom_str = "[0x%02x]" % self.fetch()
 
             if opcode & 3 == 3:
-                label = register_video2_entry(x_str, y_str, zoom_str, offset)
+                label = register_video2_entry(x_str, y_str, self.current_palette_number, zoom_str, offset)
                 return "video type=%d, offset=%s, x=%s, y=%s, zoom=%s" % (VIDEO2, label, x_str, y_str, zoom_str)
             else:
-                label = register_cinematic_entry(x_str, y_str, zoom_str, offset)
+                label = register_cinematic_entry(x_str, y_str, self.current_palette_number, zoom_str, offset)
                 return "video type=%d, offset=%s, x=%s, y=%s, zoom=%s" % (CINEMATIC, label, x_str, y_str, zoom_str)
 
         elif opcode == 0x00: # movConst
@@ -304,6 +377,7 @@ class AWVM_Trace(ExecTrace):
         elif opcode == 0x0b: # setPalette
             paletteId = self.fetch()
             self.fetch() # waste a byte...
+            self.current_palette_number = paletteId
             return "setPalette 0x%02X" % paletteId
 
         elif opcode == 0x0c: # freezeChannel
@@ -410,6 +484,7 @@ class AWVM_Trace(ExecTrace):
             self.illegal_instruction(opcode)
             return "; DISASM ERROR! Illegal instruction (opcode = 0x%02X)" % opcode
 
+
 used_pdata = []
 def visited_pdata(addr):
     """ Keeps track of all polygon data byte addresses that are
@@ -417,6 +492,7 @@ def visited_pdata(addr):
     global used_pdata
     if addr not in used_pdata:
         used_pdata.append(addr)
+
 
 def print_unused_polygon_data():
     """Prints which ranges of the polygon data have
@@ -438,160 +514,12 @@ def print_unused_polygon_data():
         end = max_addr
         print (f"{hex(start)}-{hex(end)} ({(end-start+1)})")
 
-game_level = None
-polygon_data = None
-pdata_offset = 0
-def fetch_polygon_data():
-    global pdata_offset
-    try:
-        value = polygon_data[game_level << 16 | pdata_offset]
-    except:
-        print ("ERROR: exception on fetch_polygon_data() FIXME!")
-        return 0
-    # visited_pdata(pdata_offset)
-    pdata_offset += 1
-    return value
-
-DEFAULT_ZOOM = 0x40
-MAX_POINTS = 50
-def fillPolygon(c, zoom, color, cx, cy):
-    #print("    <{}>".format(hex(pdata_offset)))
-    bbox_w = fetch_polygon_data() * float(zoom) / DEFAULT_ZOOM;
-    bbox_h = fetch_polygon_data() * float(zoom) / DEFAULT_ZOOM;
-    numPoints = fetch_polygon_data()
-    #print("        -> {} points polygon".format(numPoints))
-
-    if not ((numPoints & 1) == 0 and numPoints < MAX_POINTS):
-        print (f"error: numPoints = {numPoints}")
-        return # FIXME! sys.exit(-1)
-
-    #Read all points, directly from bytecode segment
-    for i in range(numPoints):
-        x = fetch_polygon_data() * float(zoom) / DEFAULT_ZOOM
-        y = fetch_polygon_data() * float(zoom) / DEFAULT_ZOOM
-        #print ("        {}   x:{} y:{}".format(hex(pdata_offset), x, y))
-        if i==0:
-            c.move_to(cx - bbox_w/2 + x, cy - bbox_h/2 + y)
-        else:
-            c.line_to(cx - bbox_w/2 + x, cy - bbox_h/2 + y)
-
-    c.close_path()
-    c.set_source_rgb(0, 0, 0) # TODO: add color fill
-    c.stroke()
-
-def readAndDrawPolygon(c, color, zoom, x, y):
-    global pdata_offset
-
-    value = fetch_polygon_data()
-
-    if value >= 0xC0:
-        if color & 0x80:
-            color = value & 0x3F
-
-        backup = pdata_offset
-        fillPolygon(c, zoom, color, x, y)
-        pdata_offset = backup
-    else:
-        value &= 0x3F
-        if value == 2:
-            readAndDrawPolygonHierarchy(c, zoom, x, y)
-        else:
-            print("ERROR: readAndDrawPolygon() (value != 2)\n")
-            return # FIXME! sys.exit(-1)
-
-def readAndDrawPolygonHierarchy(c, zoom, pgc_x, pgc_y):
-    global pdata_offset
-    pt_x = pgc_x - (fetch_polygon_data() * float(zoom) / DEFAULT_ZOOM)
-    pt_y = pgc_y - (fetch_polygon_data() * float(zoom) / DEFAULT_ZOOM)
-    num_children = fetch_polygon_data()
-
-    #print ("  hierarchy with {} children.".format(num_children))
-    for child in range(num_children):
-
-        offset = fetch_polygon_data()
-        offset = offset << 8 | fetch_polygon_data()
-
-        po_x = pt_x + (fetch_polygon_data() * float(zoom) / DEFAULT_ZOOM)
-        po_y = pt_y + (fetch_polygon_data() * float(zoom) / DEFAULT_ZOOM)
-        #print "child #{}: offset={} ({}) po_x={} po_y={}".format(
-        #  child,
-        #  hex((2*offset) & 0xFFFF), hex(offset),
-        #  po_x, po_y)
-
-        color = 0xFF
-        if offset & 0x8000:
-            color = fetch_polygon_data() & 0x7F
-            fetch_polygon_data() #and waste a byte...
-
-        backup = pdata_offset
-
-        pdata_offset = (offset & 0x7FFF) * 2
-        readAndDrawPolygon(c, color, zoom, po_x, po_y);
-
-        pdata_offset = backup
-
-import os
-from cairo import SVGSurface, Context, Matrix
-COLOR_BLACK = 0xFF
-def extract_polygon_data(romset_dir, cinematic):
-    global polygon_data, pdata_offset
-    global cinematic_entries
-    global cinematic_counter
-    global video2_entries
-    global game_level
-
-    if cinematic:
-        try:
-            polygon_data = open(f"{romset_dir}/cinematic.rom", "rb").read()
-        except:
-            print("FIXME! Did not find a cinematic.rom file...")
-            return
-        entries = cinematic_entries
-        level_path = f"{output_dir}/level_{game_level}"
-        dirpath = f"{level_path}/cinematic/"
-        makedir(level_path)
-    else:
-        try:
-            polygon_data = open(f"{romset_dir}/video2.rom", "rb").read()
-        except:
-            print("FIXME! Did not find a video2.rom file...")
-            return
-
-        entries = video2_entries
-        dirpath = f"{output_dir}/common_video/"
-        game_level = 0
-
-    makedir(dirpath)
-
-    for addr in entries.keys():
-        entry = entries[addr]
-        s = SVGSurface(f"{dirpath}/{entry['label']}.svg", 320, 200)
-        c = Context(s)
-        zoom = entry["zoom"]
-        x = entry["x"]
-        y = entry["y"]
-
-        if not isinstance(zoom, int):
-            zoom = 0x40 #HACK!
-
-        if not isinstance(x, int):
-            x = 160 #HACK!
-
-        if not isinstance(y, int):
-            y = 100 #HACK!
-
-        #print ("\ndecoding polygons at {}: {}".format(hex(addr), entry))
-        pdata_offset = addr
-        readAndDrawPolygon(c, COLOR_BLACK, zoom, x, y)
-        s.finish()
-
-    # reset structures:
-    cinematic_entries = {}
-    cinematic_counter = 0
 
 def makedir(path):
+    import os
     if not os.path.exists(path):
         os.mkdir(path)
+
 
 import sys
 if len(sys.argv) != 3:
@@ -601,13 +529,19 @@ else:
     output_dir = sys.argv[2]
     gamerom = f"{romset_dir}/bytecode.rom"
     makedir(output_dir)
+    
+    from decode_polygons import PolygonDecoder
+    pd = PolygonDecoder(romset_dir,
+                        output_dir)
+    
     for game_level in range(9):
         print (f"disassembling level {game_level}...")
         trace = AWVM_Trace(gamerom, rombank=0x10000*game_level, loglevel=0)
+        trace.current_palette_number = 0
         trace.run()
-#    trace.print_ranges()
-#    trace.print_grouped_ranges()
-#    print_video_entries()
+#        trace.print_ranges()
+#        trace.print_grouped_ranges()
+#        print_video_entries()
 
         level_path = f"{output_dir}/level_{game_level}"
         makedir(level_path)
@@ -615,12 +549,13 @@ else:
         print (f"\t{len(cinematic_entries.keys())} cinematic entries.")
         # cinematic polygon data:
         used_pdata = []
-        extract_polygon_data(romset_dir, True)
+        pd.extract_polygon_data(game_level, cinematic_entries, cinematic=True)
+        cinematic_entries = {}
+        cinematic_counter = 0
         # print_unused_polygon_data()
-
 
     # common polygon data:
     print (f"\t{len(video2_entries.keys())} video2 entries.")
-    extract_polygon_data(romset_dir, False)
+    pd.extract_polygon_data(game_level, video2_entries, cinematic=False)
 
 
