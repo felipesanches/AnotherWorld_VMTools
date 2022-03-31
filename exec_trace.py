@@ -15,11 +15,12 @@ class CodeBlock():
         instruction.
     '''
 
-    def __init__(self, start, end, next_block=[]):
+    def __init__(self, start, end, next_block=[], needs_label=False):
         self.start = start
         self.end = end
         self.subroutines = {}
         self.next_block = next_block
+        self.needs_label = needs_label
 
     def add_subroutine_call(self, instr_address, routine_address):
         self.subroutines[instr_address] = routine_address
@@ -78,14 +79,17 @@ class ExecTrace():
         self.rombank = rombank
         self.rom = open(romfile, "rb").read()
         self.visited_ranges = []
-        self.pending_entry_points = []
+        self.pending_labeled_entry_points = []
+        self.pending_unlabeled_entry_points = []
         self.current_entry_point = None
+        self.current_entry_point_needs_label = False
         self.PC = None
         self.disasm = {}
 
 ### Public method to start the binary code interpretation ###
     def run(self, entry_point=0x0000):
         self.current_entry_point = entry_point
+        self.current_entry_point_needs_label = True
         self.PC = entry_point
         while self.PC is not None:
             address = self.PC
@@ -98,9 +102,10 @@ class ExecTrace():
     def subroutine(self, address):
         self.add_range(start=self.current_entry_point,
                        end=self.PC-1,
-                       exit=[self.PC, address])
-        self.schedule_entry_point(self.PC)
-        self.schedule_entry_point(address)
+                       exit=[self.PC, address],
+                       needs_label=self.current_entry_point_needs_label)
+        self.schedule_entry_point(self.PC, needs_label=False)
+        self.schedule_entry_point(address, needs_label=True)
 
         self.log(VERBOSE, "CALL SUBROUTINE ({})".format(hex(address)))
         self.log_status()
@@ -109,7 +114,8 @@ class ExecTrace():
     def return_from_subroutine(self):
         self.add_range(start=self.current_entry_point,
                        end=self.PC-1,
-                       exit=[])
+                       exit=[],
+                       needs_label=self.current_entry_point_needs_label)
         self.log(VERBOSE, "RETURN FROM SUBROUTINE")
         self.log_status()
         self.restart_from_another_entry_point()
@@ -126,19 +132,22 @@ class ExecTrace():
         if address > self.current_entry_point and address < self.PC:
             self.add_range(start=self.current_entry_point,
                            end=address-1,
-                           exit=[address])
+                           exit=[address],
+                           needs_label=self.current_entry_point_needs_label)
             self.add_range(start=address,
                            end=self.PC-1,
-                           exit=[self.PC, address])
+                           exit=[self.PC, address],
+                           needs_label=True)
             if conditional:
-                self.schedule_entry_point(self.PC)
+                self.schedule_entry_point(self.PC, needs_label=False)
         else:
             self.add_range(start=self.current_entry_point,
                            end=self.PC-1,
-                           exit=[self.PC, address])
+                           exit=[self.PC, address],
+                           needs_label=self.current_entry_point_needs_label)
             if conditional:
-                self.schedule_entry_point(self.PC)
-            self.schedule_entry_point(address)
+                self.schedule_entry_point(self.PC, needs_label=False)
+            self.schedule_entry_point(address, needs_label=True)
 
         self.log_ranges()
         self.restart_from_another_entry_point()
@@ -146,7 +155,8 @@ class ExecTrace():
     def illegal_instruction(self, opcode):
         self.add_range(start=self.current_entry_point,
                        end=self.PC-1,
-                       exit=["Illegal Opcode: {}".format(hex(opcode))])
+                       exit=["Illegal Opcode: {}".format(hex(opcode))],
+                       needs_label=self.current_entry_point_needs_label)
         self.log(ERROR, "[{}] ILLEGAL: {}".format(hex(self.PC-1), hex(opcode)))
         self.PC = None  # This will finish the crawling
         # sys.exit(-1)
@@ -165,8 +175,10 @@ class ExecTrace():
                     # split the block into two:
                     new_block = CodeBlock(start=codeblock.start,
                                           end=address-1,
-                                          next_block=[address])
+                                          next_block=[address],
+                                          needs_label=codeblock.needs_label)
                     codeblock.start = address
+                    codeblock.needs_label = False # TODO: Verify this!
                     # and also split ownership of subroutine calls:
                     for instr_addr, call_addr in codeblock.subroutines.items():
                         if instr_addr < address:
@@ -179,39 +191,55 @@ class ExecTrace():
         return False
 
     def restart_from_another_entry_point(self):
-        if len(self.pending_entry_points) == 0:
+        if len(self.pending_labeled_entry_points) == 0 and len(self.pending_unlabeled_entry_points) == 0:
             self.PC = None  # This will finish the crawling
         else:
-            address = self.pending_entry_points.pop()
+            if len(self.pending_labeled_entry_points) > 0:
+                address = self.pending_labeled_entry_points.pop()
+                self.current_entry_point_needs_label = True
+            else:
+                address = self.pending_unlabeled_entry_points.pop()
+                self.current_entry_point_needs_label = False
+
             self.current_entry_point = address
             self.PC = address
             self.log(VERBOSE, "Restarting from: {}".format(hex(address)))
 
-    def add_range(self, start, end, exit=None):
+    def add_range(self, start, end, needs_label, exit=None):
         if end < start:
-            self.add_range(end, start, exit)
+            self.add_range(end, start, exit, needs_label)
             return
 
-        self.log(DEBUG, "=== New Range: start: {}  end: {} ===".format(hex(start), hex(end)))
-        block = CodeBlock(start, end, exit)
+        self.log(DEBUG, f"=== New Range: start: {hex(start)}  end: {hex(end)} needs_label: {needs_label}===")
+        block = CodeBlock(start, end, exit, needs_label)
         self.visited_ranges.append(block)
 
-    def schedule_entry_point(self, address):
+    def schedule_entry_point(self, address, needs_label):
         if self.already_visited(address):
+            #FIXME: I think the same address can be referenced needing a label
+            # even after it was already visited once not originally needing a label.
             return
 
-        if address not in self.pending_entry_points:
-            self.pending_entry_points.append(address)
-            self.log(VERBOSE, "SCHEDULING: {}".format(hex(address)))
-            self.log_status()
+        if needs_label:
+            if address not in self.pending_labeled_entry_points:
+                self.pending_labeled_entry_points.append(address)
+        else:
+            if address not in self.pending_unlabeled_entry_points:
+                self.pending_unlabeled_entry_points.append(address)
+
+        self.log(VERBOSE, "SCHEDULING: {}".format(hex(address)))
+        self.log_status()
+
 
     def increment_PC(self):
         if self.already_visited(self.PC):
             self.log(VERBOSE, "ALREADY BEEN AT {}!".format(hex(self.PC)))
-            self.log(DEBUG, "pending_entry_points: {}".format(self.pending_entry_points))
+            self.log(DEBUG, "pending_labeled_entry_points: {}".format(self.pending_labeled_entry_points))
+            self.log(DEBUG, "pending_unlabeled_entry_points: {}".format(self.pending_unlabeled_entry_points))
             self.add_range(start=self.current_entry_point,
                            end=self.PC-1,
-                           exit=[self.PC])
+                           exit=[self.PC],
+                           needs_label=self.current_entry_point_needs_label)
             self.restart_from_another_entry_point()
             return -1
         else:
@@ -230,7 +258,8 @@ class ExecTrace():
             print(msg)
 
     def log_status(self):
-        self.log(VERBOSE, "Pending: {}".format(list(map(hex, self.pending_entry_points))))
+        self.log(VERBOSE, "Pending labeled: {}".format(list(map(hex, self.pending_labeled_entry_points))))
+        self.log(VERBOSE, "Pending unlabeled: {}".format(list(map(hex, self.pending_unlabeled_entry_points))))
 
     def log_ranges(self):
         results = []
@@ -280,7 +309,11 @@ class ExecTrace():
                 continue
 
             if codeblock.start > next_addr:
-                indent = "LABEL_%04X: " % next_addr
+                if codeblock.needs_label == True:
+                    indent = f"{self.get_label(next_addr)}: "
+                else:
+                    indent = "            "
+
                 data = []
                 for addr in range(next_addr, codeblock.start):
                     data.append(f"0x{self.rom[self.rombank + addr]:02X}")
@@ -292,7 +325,10 @@ class ExecTrace():
                     asm.write(f"{indent}db {', '.join(data)}\n")
 
             address = codeblock.start
-            indent = "LABEL_%04X: " % address
+            if codeblock.needs_label == True:
+                indent = f"{self.get_label(address)}: "
+            else:
+                indent = "            "
             for address in range(codeblock.start, codeblock.end+1):
                 if address in self.disasm:
                     asm.write(f"{indent}{self.disasm[address]}\n")
