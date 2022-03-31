@@ -23,14 +23,15 @@ class PolygonDecoder():
         self.polygon_data = None
         makedir(output_dir)
 
-    def set_color_from_palette(self, ctx, palNum, color):
+
+    def get_color_from_palette(self, ctx, palNum, color):
         p = self.game_level << 11 | 32*palNum + 2*(color % 16)
         c1 = self.palette_data[p]
         c2 = self.palette_data[p+1]
         r = ((c1 & 0x0F) << 2) | ((c1 & 0x0F) >> 2)
         g = ((c2 & 0xF0) >> 2) | ((c2 & 0xF0) >> 6)
         b = ((c2 & 0x0F) >> 2) | ((c2 & 0x0F) << 2)
-        ctx.set_source_rgb(r/64.0, g/64.0, b/64.0)
+        return (r/64.0, g/64.0, b/64.0)
 
 
     def fetch_polygon_data(self):
@@ -47,11 +48,11 @@ class PolygonDecoder():
 
 
     def fillPolygon(self, ctx, palette_number, color, zoom, cx, cy):
-        #print("    <{}>".format(hex(self.pdata_offset)))
+        r, g, b = self.get_color_from_palette(ctx, palette_number, color)
         bbox_w = self.fetch_polygon_data() * float(zoom) / DEFAULT_ZOOM;
         bbox_h = self.fetch_polygon_data() * float(zoom) / DEFAULT_ZOOM;
         numPoints = self.fetch_polygon_data()
-        #print("        -> {} points polygon".format(numPoints))
+        #print(f"fillPolygon offs:{hex(self.pdata_offset-3)} color: {r} {g} {b} n:{numPoints}\n")
 
         if not ((numPoints & 1) == 0 and numPoints < MAX_POINTS):
             print (f"ERROR: numPoints = {numPoints}")
@@ -59,26 +60,36 @@ class PolygonDecoder():
             sys.exit(-1)
 
         #Read all points, directly from bytecode segment
+        pt_x = []
+        pt_y = []
         for i in range(numPoints):
             x = self.fetch_polygon_data() * float(zoom) / DEFAULT_ZOOM
             y = self.fetch_polygon_data() * float(zoom) / DEFAULT_ZOOM
-            #print ("        {}   x:{} y:{}".format(hex(self.pdata_offset), x, y))
+            #print(f"        {hex(self.pdata_offset)}   x:{x} y:{y}")
+            pt_x.append(cx - bbox_w/2 + x)
+            pt_y.append(cy - bbox_h/2 + y)
+
+        def is_simple_line(pt_x, pt_y):
+           return pt_x[0]==pt_x[3] and pt_x[1]==pt_x[2] and pt_y[0]==pt_y[3] and pt_y[1]==pt_y[2]
+
+        if numPoints == 4 and is_simple_line(pt_x, pt_y):
+            # make it into a 1 unit wide lozenge (or rectangle)
+            # so that the area is not null, otherwise the resulting
+            # SVG output would not properly render it.
+            pt_x[2] += 2
+            pt_x[3] += 2
+            # FIXME: This still feels like a hack.
+            #        Maybe there's a better way of handling this case...
+
+        for i in range(numPoints):
             if i==0:
-                ctx.move_to(cx - bbox_w/2 + x, cy - bbox_h/2 + y)
+                ctx.move_to(pt_x[0], pt_y[0])
             else:
-                ctx.line_to(cx - bbox_w/2 + x, cy - bbox_h/2 + y)
+                ctx.line_to(pt_x[i], pt_y[i])
 
+        ctx.set_source_rgb(r, g, b)
         ctx.close_path()
-
-        ctx.stroke_preserve()
-        ctx.save()
-        self.set_color_from_palette(ctx, palette_number, color)
         ctx.fill()
-
-        ctx.restore()
-        self.set_color_from_palette(ctx, palette_number, color)
-        ctx.set_line_width(2)
-        ctx.stroke()
 
 
     def readAndDrawPolygon(self, address, ctx, palette_number, color, zoom, x, y):
@@ -91,6 +102,7 @@ class PolygonDecoder():
         '''
         self.pdata_offset = address
         value = self.fetch_polygon_data()
+        #print(f"RnDPoly @ {hex(address)} color={hex(color)} value={hex(value)}")
     
         if value >= 0xC0:
             if color & 0x80:
@@ -114,7 +126,7 @@ class PolygonDecoder():
         pt_y = pgc_y - (self.fetch_polygon_data() * float(zoom) / DEFAULT_ZOOM)
         num_children = self.fetch_polygon_data() + 1
 
-        # print (f"  hierarchy with {num_children} children.")
+        #print (f"  hierarchy @ {hex(self.pdata_offset-3)} with {num_children} children.\n---\n")
         for child in range(num_children):
 
             offset = self.fetch_polygon_data()
