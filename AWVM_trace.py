@@ -504,6 +504,14 @@ KNOWN_LABELS = {
   }
 }
 
+# For now disable these, because they are specific to the msdos release:
+LABELED_CINEMATIC_ENTRIES = {}
+KNOWN_LABELS = {}
+POSSIBLY_UNUSED_CODEBLOCKS = {}
+# FIXME: Come up with a way of loading this kind of thing based on the target
+#        release of assets being disassembled.
+
+
 SPECIAL_PURPOSE_VARS = {
     0x3c: "RANDOM_SEED",
     0x54: "HACK_VAR_54",
@@ -812,6 +820,9 @@ class AWVM_Trace(ExecTrace):
             delay = (delay << 8) | self.fetch()
             pos = self.fetch()
             return "song id=0x%04X, delay=0x%04X, pos=0x%02X" % (resNum, delay, pos)
+
+        elif opcode == 0x1b: # gameover on SEGA Genesis
+            return "GameOver"
 
         else:
             self.illegal_instruction(opcode)
