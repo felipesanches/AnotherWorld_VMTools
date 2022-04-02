@@ -865,6 +865,7 @@ def makedir(path):
         os.mkdir(path)
 
 
+import os
 import sys
 if len(sys.argv) != 3:
     print(f"usage: {sys.argv[0]} <romset_dir> <disasm_output_dir>")
@@ -877,8 +878,10 @@ else:
     from decode_polygons import PolygonDecoder
     pd = PolygonDecoder(romset_dir,
                         output_dir)
-    
-    for game_level in range(9):
+
+    num_levels = int(os.path.getsize(gamerom) / 0x10000)
+    print(f"Num. levels = {num_levels}")
+    for game_level in range(num_levels):
         print (f"disassembling level {game_level}...")
         trace = AWVM_Trace(gamerom, rombank=0x10000*game_level, loglevel=0)
         trace.game_level = game_level # TODO: pass this to the constructor
@@ -893,9 +896,11 @@ else:
         makedir(level_path)
         trace.save_disassembly_listing(f"{level_path}/level-{game_level}.asm")
         print (f"\t{len(cinematic_entries.keys())} cinematic entries.")
+
         # cinematic polygon data:
         used_pdata = []
         pd.extract_polygon_data(game_level, cinematic_entries, cinematic=True)
+
         cinematic_entries = {}
         cinematic_counter = 0
         # print_unused_polygon_data()

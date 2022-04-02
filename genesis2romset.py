@@ -16,7 +16,7 @@ data = None
 def generate_bytecode_rom():
     bytecode_rom = open(f"{output_dir}/bytecode.rom", "wb")
     # offs:0x5281a len: 9c8c
-    bytecode_offsets = [-1, -1, 0x3f576, 0x5281a, 0x693e8, 0x88716, 0x919a0, 0xbcab8, 0xada78]
+    bytecode_offsets = [0x3f576, 0x5281a, 0x693e8, 0x88716, 0x919a0, 0xbcab8, 0xada78]
 
     for offset in bytecode_offsets:
         for i in range(0x10000):
@@ -29,7 +29,7 @@ def generate_bytecode_rom():
 
 def generate_cinematic_rom():
     cinematic_rom = open(f"{output_dir}/cinematic.rom", "wb")    
-    cinematic_offsets = [-1, -1, 0x44774, 0x5c4b4, 0x7894c, 0x8a69e, 0x9e0b4, 0xbd612, 0xae65c]
+    cinematic_offsets = [0x44774, 0x5c4b4, 0x7894c, 0x8a69e, 0x9e0b4, 0xbd612, 0xae65c]
 
     for offset in cinematic_offsets:
         for i in range(0x10000):
