@@ -1,4 +1,4 @@
-from common_data import LABELED_CINEMATIC_ENTRIES
+from releases.common_data import LABELED_CINEMATIC_ENTRIES
 
 POSSIBLY_UNUSED_CODEBLOCKS = {
   0: [0x007B, 0x0D1E, 0x109E],
