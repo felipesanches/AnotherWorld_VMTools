@@ -454,9 +454,11 @@ else:
         release_name = sys.argv[3]
         try:
             data = __import__(name=f"releases.{release_name}",
-                              fromlist=["LABELED_CINEMATIC_ENTRIES",
+                              fromlist=["MD5_CHECKSUMS",
+                                        "LABELED_CINEMATIC_ENTRIES",
                                         "POSSIBLY_UNUSED_CODEBLOCKS",
                                         "KNOWN_LABELS"])
+            MD5_CHECKSUMS=data.MD5_CHECKSUMS
             LABELED_CINEMATIC_ENTRIES = data.LABELED_CINEMATIC_ENTRIES
             KNOWN_LABELS = data.KNOWN_LABELS
             POSSIBLY_UNUSED_CODEBLOCKS = data.POSSIBLY_UNUSED_CODEBLOCKS

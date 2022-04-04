@@ -1,4 +1,14 @@
 from releases import common_data
+
+MD5_CHECKSUMS = {
+    'bytecode.rom': '63e69335329c578a41d55d3843871fb3',
+    'cinematic.rom': '8c6d3ee16b0d62927df6093b5c641e31',
+    'palettes.rom': 'BAD_DUMP 81ad94d572990cba3a9e163c5fab4591', # copied from msdos release
+    'str_data.rom': 'BAD_DUMP 6e4f0bcfc98b1e956686553d67011859', # copied from Fabien Sanglard's engine / msdos release
+    'str_index.rom': 'BAD_DUMP 254a3e2c0a84fde07a600618b3e32744', # copied from Fabien Sanglard's engine / msdos release
+    'video2.rom': 'ef35800c0c9effd2dd8388d140370d61',
+}
+
 LABELED_CINEMATIC_ENTRIES = {
   0: common_data.LABELED_CINEMATIC_ENTRIES.get(2, []),
   1: common_data.LABELED_CINEMATIC_ENTRIES.get(3, []),

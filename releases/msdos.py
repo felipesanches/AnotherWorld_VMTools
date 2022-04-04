@@ -1,5 +1,14 @@
 from releases.common_data import LABELED_CINEMATIC_ENTRIES
 
+MD5_CHECKSUMS = {
+    'bytecode.rom': '0b0fd58ff5c8eb89dd0b619c3cace61b',
+    'cinematic.rom': '1c36dc9286aa7843be6060a71b1fda6c',
+    'palettes.rom': '81ad94d572990cba3a9e163c5fab4591',
+    'str_data.rom': 'BAD_DUMP 6e4f0bcfc98b1e956686553d67011859', # copied from Fabien Snaglard's engine
+    'str_index.rom': 'BAD_DUMP 254a3e2c0a84fde07a600618b3e32744', # copied from Fabien Snaglard's engine
+    'video2.rom': 'ef35800c0c9effd2dd8388d140370d61'
+}
+
 POSSIBLY_UNUSED_CODEBLOCKS = {
   0: [0x007B, 0x0D1E, 0x109E],
 
