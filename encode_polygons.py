@@ -3,6 +3,7 @@
 # (c) 2022 Felipe Correa da Silva Sanches <juca@members.fsf.org>
 # Licensed under GPL version 2 or later
 
+
 class PolygonEncoder():
     def __init__(self, input_svg, output):
         self.input_svg = input_svg
@@ -127,14 +128,14 @@ class PolygonEncoder():
         print(f"Polygon data successfully encoded to {output_filename}")
 
 
+if __name__ == '__main__':
+    import sys
+    if len(sys.argv) != 3:
+        print(f"usage: {sys.argv[0]} <input.svg> <output.bin>")
+        sys.exit(-1)
 
-import sys
-if len(sys.argv) != 3:
-    print(f"usage: {sys.argv[0]} <input.svg> <output.bin>")
-    sys.exit(-1)
 
-
-input_svg = sys.argv[1]
-output_filename = sys.argv[2]
-pe = PolygonEncoder(input_svg, output_filename)
-pe.encode()
+    input_svg = sys.argv[1]
+    output_filename = sys.argv[2]
+    pe = PolygonEncoder(input_svg, output_filename)
+    pe.encode()

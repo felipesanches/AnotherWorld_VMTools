@@ -1,4 +1,9 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
+#
+# (c) 2022 Felipe Correa da Silva Sanches <juca@members.fsf.org>
+# Licensed under GPL version 2 or later
+
+
 import sys
 
 class CodeBlock():
