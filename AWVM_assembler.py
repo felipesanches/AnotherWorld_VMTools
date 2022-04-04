@@ -191,6 +191,9 @@ def encode(instr):
         word(ops["delay"]["value"])
         byte(ops["pos"]["value"])
 
+    elif instr["name"] == "GameOver":
+        byte(0x1B)
+
     elif instr["name"] == "freezeChannels":
         first, last = instr["operands"]
         byte(0x0C)
@@ -369,7 +372,7 @@ def assemble(input_filename):
                                  "load", "setup", "djnz", "freezeChannels",
                                  "unfreezeChannels", "deleteChannels",
                                  "killChannel", "text", "sub", "and", "or",
-                                 "shl", "shr", "play", "song"]:
+                                 "shl", "shr", "play", "song", "GameOver"]:
             if line.strip().startswith(instruction_name):
                 instr = parse_common(instruction_name, line)
                 instructions.append((label, instr))
