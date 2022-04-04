@@ -42,12 +42,11 @@ def generate_cinematic_rom():
 
 def generate_video2_rom():
     video2_rom = open(f"{output_dir}/video2.rom", "wb")    
-    # TODO: figure out the correct address:
-    # video2_offset = ...
-
-    for i in range(0x10000):
+    video2_offset = 0xcc000
+    video2_len = 0x6214
+    for i in range(0x8000):
         addr = video2_offset + i
-        if addr < len(data):
+        if i < video2_len:
             video2_rom.write(bytes([data[addr]]))
         else:
             video2_rom.write(bytes([0xFF]))
@@ -65,4 +64,4 @@ data = open(input_rom_file, "rb").read()
 
 generate_bytecode_rom()
 generate_cinematic_rom()
-# generate_video2_rom()
+generate_video2_rom()
