@@ -183,7 +183,7 @@ class ExecTrace():
                                           next_block=[address],
                                           needs_label=codeblock.needs_label)
                     codeblock.start = address
-                    codeblock.needs_label = False # TODO: Verify this!
+                    codeblock.needs_label = True
                     # and also split ownership of subroutine calls:
                     for instr_addr, call_addr in codeblock.subroutines.items():
                         if instr_addr < address:

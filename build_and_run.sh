@@ -1,4 +1,4 @@
-SRC=disasm
+SRC=msdos_disasm
 MAME=./awvm
 ROMS=~/ROM_DUMPS/FSanches/another_world_ROMs
 TARGET=$ROMS/aw_msdos
