@@ -45,9 +45,9 @@ def register_cinematic_entry(x, y, palette_number, zoom, address):
         return cinematic_entries[address]["label"]
 
     if game_level in LABELED_CINEMATIC_ENTRIES.keys() and address in LABELED_CINEMATIC_ENTRIES[game_level]:
-        label = "LEVEL_%d_CINEMATIC_%s" % (game_level, LABELED_CINEMATIC_ENTRIES[game_level][address])
+        label = "CINEMATIC_%s" % (LABELED_CINEMATIC_ENTRIES[game_level][address])
     else:
-        label = "LEVEL_%d_CINEMATIC_%03d" % (game_level, cinematic_counter)
+        label = "CINEMATIC_%03d" % (cinematic_counter)
     cinematic_counter += 1
     cinematic_entries[address] = {
         'palette_number': palette_number,

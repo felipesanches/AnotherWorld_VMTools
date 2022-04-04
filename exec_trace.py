@@ -310,7 +310,11 @@ class ExecTrace():
 
             if codeblock.start > next_addr:
                 if codeblock.needs_label == True:
-                    indent = f"{self.get_label(next_addr)}: "
+                    label = self.get_label(next_addr)
+                    if len(label) <= 10:
+                        indent = f"{label}: "
+                    else:
+                        indent = f"\n{label}:\n            "
                 else:
                     indent = "            "
 
@@ -326,7 +330,11 @@ class ExecTrace():
 
             address = codeblock.start
             if codeblock.needs_label == True:
-                indent = f"{self.get_label(address)}: "
+                label = self.get_label(address)
+                if len(label) <= 10:
+                    indent = f"{label}: "
+                else:
+                    indent = f"\n{label}:\n            "
             else:
                 indent = "            "
             for address in range(codeblock.start, codeblock.end+1):
@@ -335,6 +343,7 @@ class ExecTrace():
                     indent = "            "
             next_addr = codeblock.end + 1
         asm.close()
+
 
 def generate_graph():
     def block_name(block):
