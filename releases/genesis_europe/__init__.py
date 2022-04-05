@@ -1,5 +1,20 @@
 from releases import common_data
 
+def generate_romset(input_dir, output_dir):
+    from releases.genesis_europe.genesis2romset import GenesisEuropeROMSet
+    input_rom_file = f"{input_dir}/Another World (Europe).md"
+
+    # TODO: validate original file checksum
+    #       md5sum = 8cc928edf09159401618e273028216ea
+    #       sha1sum = 9d98d6817b3e3651837bb2692f7a2a60a608c055
+
+    romset = GenesisEuropeROMSet(input_rom_file, output_dir)
+    romset.generate()
+    
+    # TODO: validate checksums of generated ROM set
+    #       according to the checksums listed below
+
+
 MD5_CHECKSUMS = {
     'bytecode.rom': '63e69335329c578a41d55d3843871fb3',
     'cinematic.rom': '8c6d3ee16b0d62927df6093b5c641e31',
@@ -9,6 +24,10 @@ MD5_CHECKSUMS = {
     'video2.rom': 'ef35800c0c9effd2dd8388d140370d61',
 }
 
+# Note:
+# The SEGA Genesis game does not include the game intro sequence and the codewheel screen
+# which are typically the first two sets of bytecode/cinematic entries
+ 
 LABELED_CINEMATIC_ENTRIES = {
   0: common_data.LABELED_CINEMATIC_ENTRIES.get(2, []),
   1: common_data.LABELED_CINEMATIC_ENTRIES.get(3, []),
@@ -18,6 +37,7 @@ LABELED_CINEMATIC_ENTRIES = {
   5: common_data.LABELED_CINEMATIC_ENTRIES.get(7, []),
   6: common_data.LABELED_CINEMATIC_ENTRIES.get(8, []),
 }
+
 
 POSSIBLY_UNUSED_CODEBLOCKS = {
   0: [0x0064, 0x00B6, 0x0141, 0x01A5, 0x01F8, 0x01FF, 0x04C2, 0x05E6,
@@ -67,6 +87,7 @@ POSSIBLY_UNUSED_CODEBLOCKS = {
   6: [0x0150, 0x0153, 0x01E5, 0x01F2, 0x0292, 0x0382, 0x03F5, 0x0467,
       0x0BBA, 0x0BCA]
 }
+
 
 KNOWN_LABELS = {
   0: {

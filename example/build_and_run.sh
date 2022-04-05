@@ -6,4 +6,4 @@ TOOLCHAIN_DIR=`pwd`/..
 EXAMPLE_DIR=$TOOLCHAIN_DIR/example/
 
 cd ~/mame
-$TOOLCHAIN_DIR/AWVM_assembler.py $EXAMPLE_DIR/$EXAMPLE.asm && cp $EXAMPLE_DIR/$EXAMPLE.bin $TARGET/resource-0x15.bin && $MAME -rp $ROMS aw_msdos -window -ui_active #-debug
+$TOOLCHAIN_DIR/awvm-asm.py $EXAMPLE_DIR/$EXAMPLE.asm && cp $EXAMPLE_DIR/$EXAMPLE.bin $TARGET/resource-0x15.bin && $MAME -rp $ROMS aw_msdos -window -ui_active #-debug

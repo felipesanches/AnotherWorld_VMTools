@@ -1,18 +1,18 @@
-SRC=msdos_disasm
+SRC=output/msdos/disasm
 MAME=./awvm
 ROMS=~/ROM_DUMPS/FSanches/another_world_ROMs
 TARGET=$ROMS/aw_msdos
 TOOLCHAIN_DIR=`pwd`
 
-$TOOLCHAIN_DIR/AWVM_assembler.py $SRC/level_0/level-0.asm
-$TOOLCHAIN_DIR/AWVM_assembler.py $SRC/level_1/level-1.asm
-$TOOLCHAIN_DIR/AWVM_assembler.py $SRC/level_2/level-2.asm
-$TOOLCHAIN_DIR/AWVM_assembler.py $SRC/level_3/level-3.asm
-$TOOLCHAIN_DIR/AWVM_assembler.py $SRC/level_4/level-4.asm
-$TOOLCHAIN_DIR/AWVM_assembler.py $SRC/level_5/level-5.asm
-$TOOLCHAIN_DIR/AWVM_assembler.py $SRC/level_6/level-6.asm
-$TOOLCHAIN_DIR/AWVM_assembler.py $SRC/level_7/level-7.asm
-$TOOLCHAIN_DIR/AWVM_assembler.py $SRC/level_8/level-8.asm
+$TOOLCHAIN_DIR/awvm-asm.py $SRC/level_0/level-0.asm
+$TOOLCHAIN_DIR/awvm-asm.py $SRC/level_1/level-1.asm
+$TOOLCHAIN_DIR/awvm-asm.py $SRC/level_2/level-2.asm
+$TOOLCHAIN_DIR/awvm-asm.py $SRC/level_3/level-3.asm
+$TOOLCHAIN_DIR/awvm-asm.py $SRC/level_4/level-4.asm
+$TOOLCHAIN_DIR/awvm-asm.py $SRC/level_5/level-5.asm
+$TOOLCHAIN_DIR/awvm-asm.py $SRC/level_6/level-6.asm
+$TOOLCHAIN_DIR/awvm-asm.py $SRC/level_7/level-7.asm
+$TOOLCHAIN_DIR/awvm-asm.py $SRC/level_8/level-8.asm
 
 cp $SRC/level_0/level-0.bin $TARGET/resource-0x15.bin
 cp $SRC/level_1/level-1.bin $TARGET/resource-0x18.bin

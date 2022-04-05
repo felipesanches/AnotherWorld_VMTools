@@ -4,7 +4,6 @@
 # Licensed under GPL version 2 or later
 
 from exec_trace import ExecTrace
-output_dir = ""
 game_level = None
 cinematic_counter = 0
 video2_counter = 0
@@ -443,35 +442,43 @@ def makedir(path):
 
 import os
 import sys
-if len(sys.argv) not in [3, 4]:
-    print(f"usage: {sys.argv[0]} <romset_dir> <disasm_output_dir> [release-name]")
+if len(sys.argv) not in [2, 3]:
+    print(f"usage: {sys.argv[0]} <input_dir> [release-name]")
 else:
-    romset_dir = sys.argv[1]
-    output_dir = sys.argv[2]
-    gamerom = f"{romset_dir}/bytecode.rom"
-    makedir(output_dir)
-    if len(sys.argv) == 4:
-        release_name = sys.argv[3]
+    if len(sys.argv) == 3:
+        release_name = sys.argv[2]
         try:
             data = __import__(name=f"releases.{release_name}",
                               fromlist=["MD5_CHECKSUMS",
                                         "LABELED_CINEMATIC_ENTRIES",
                                         "POSSIBLY_UNUSED_CODEBLOCKS",
-                                        "KNOWN_LABELS"])
+                                        "KNOWN_LABELS",
+                                        "generate_romset"])
             MD5_CHECKSUMS=data.MD5_CHECKSUMS
             LABELED_CINEMATIC_ENTRIES = data.LABELED_CINEMATIC_ENTRIES
             KNOWN_LABELS = data.KNOWN_LABELS
             POSSIBLY_UNUSED_CODEBLOCKS = data.POSSIBLY_UNUSED_CODEBLOCKS
         except ImportError:
             sys.exit(f"ERROR: Unrecognized release name '{release_name}'")
+
+        output_dir = f"{os.getcwd()}/output"
+        disasm_dir = f"{output_dir}/{release_name}/disasm"
+        romset_dir = f"{output_dir}/{release_name}/romset"
+        data.generate_romset(input_dir=sys.argv[1],
+                             output_dir=output_dir)
     else:
+        romset_dir = sys.argv[1]
+        disasm_dir = f"{romset_dir}/output"
         LABELED_CINEMATIC_ENTRIES = {}
         KNOWN_LABELS = {}
         POSSIBLY_UNUSED_CODEBLOCKS = {}
 
-    from decode_polygons import PolygonDecoder
+    gamerom = f"{romset_dir}/bytecode.rom"
+    makedir(disasm_dir)
+
+    from releases.common_data.decode_polygons import PolygonDecoder
     pd = PolygonDecoder(romset_dir,
-                        output_dir)
+                        disasm_dir)
 
     num_levels = int(os.path.getsize(gamerom) / 0x10000)
     print(f"Num. levels = {num_levels}")
@@ -486,7 +493,7 @@ else:
 #        trace.print_grouped_ranges()
 #        print_video_entries()
 
-        level_path = f"{output_dir}/level_{game_level}"
+        level_path = f"{disasm_dir}/level_{game_level}"
         makedir(level_path)
         trace.save_disassembly_listing(f"{level_path}/level-{game_level}.asm")
         print (f"\t{len(cinematic_entries.keys())} cinematic entries.")

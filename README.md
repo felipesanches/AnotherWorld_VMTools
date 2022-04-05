@@ -7,32 +7,19 @@
 
 ## Scripts Descriptions and Use
 
-The simplest way to use this to get bytecode disasm listing (assuming you have a copy of the game files for MSDOS saved on the `msdos_release` directory) is to perform the following commands:
+The simplest way to use this to get bytecode disasm listing (assuming you have a copy of the game files for MSDOS saved on the `original/msdos/` directory) is to perform the following commands:
 
- > `./banks2resources.py msdos_release/memlist.bin resources/`
-
- > `./resources2romset.py resources/ romset/`
-
- > `./AWVM_trace.py romset/ disasm/`
+ > `./awvm-disasm.py original/msdos/ msdos`
 
 Below is a more detailed description of each individual script:
 
-### banks2resources.py
-- Reads compressed game data files such as "msdos_release/bank*"
-- Outputs raw binary files called "resource-0x*.bin"
-- These are the files used by the MAME driver at https://github.com/felipesanches/mame/commit/1b943d2264b8d536b1815d8d21ef6234bb586b13
-
-### resources2romset.py
-- Packs together resource files into ROM files.
-- This is also useful for https://github.com/felipesanches/AnotherWorld_FPGA
-
-### AWVM_trace.py
+### awvm-disasm.py
 - Disassembles ROM files and generates an assembly source code tree.
-- Includes data files extracted from the resource files.
+- Includes data files extracted from the resource files such as SVG images.
 
-### AWVM_assembler.py
+### awvm-asm.py
 - Assembles a source tree into bytecode binaries (with embedded data).
-- We expect perfect round-tripping of a source tree, meaning that `AWVM_trace.py` should generate binary outputs absolutely identical to the inputs of `AWVM_trace.py`.
+- We expect perfect round-tripping of a source tree, meaning that `awvm-asm.py` should generate binary outputs absolutely identical to the inputs of `awvm-disasm.py`.
 
 ### build_and_run.sh
 - Helper shell script that builds an assembly source tree, copies the generated ROM files to the MAME rompath and executes the emulator.

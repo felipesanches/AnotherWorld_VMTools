@@ -1,4 +1,9 @@
+env
+original
+output
 .env
 .vscode
 .idea
-__pycache__/
+__pycache__
+cfg
+example/*.bin
