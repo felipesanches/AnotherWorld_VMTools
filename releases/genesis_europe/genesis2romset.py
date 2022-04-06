@@ -21,9 +21,41 @@ class GenesisEuropeROMSet():
 
 
     def generate(self):
+        self.generate_text_string_roms()
+        #self.generate_font_data_rom()
         self.generate_bytecode_rom()
         self.generate_cinematic_rom()
         self.generate_video2_rom()
+        #self.generate_screens_rom()
+        #self.generate_samples_rom()
+        #self.generate_palettes_rom()
+
+
+    def generate_text_string_roms(self):
+        str_data_rom = open(f"{self.output_dir}/str_data.rom", "wb")
+        str_data_rom.seek(0xfff)
+        str_data_rom.write(bytes([0x00]))
+
+        str_index_rom = open(f"{self.output_dir}/str_index.rom", "wb")
+        str_index_rom.seek(0x7ff)
+        str_index_rom.write(bytes([0x00]))
+
+        addr = 0x382B
+        strdata_addr = 0
+        str_data_rom.seek(0)
+        while addr <= 0x46fe:
+            index = (self.data[addr] << 8) | self.data[addr+1]
+            addr += 2
+            str_index_rom.seek(index*2)
+            str_index_rom.write(bytes([strdata_addr & 0xff]))
+            str_index_rom.write(bytes([(strdata_addr >> 8) & 0xff]))
+            while self.data[addr] != 0:
+                str_data_rom.write(bytes([self.data[addr]]))
+                addr += 1
+                strdata_addr += 1
+            str_data_rom.write(bytes([0x00]))
+            strdata_addr += 1
+            addr += 1
 
 
     def generate_bytecode_rom(self):

@@ -46,16 +46,17 @@ class MSDOSROMSet():
         if not os.path.exists(self.output_dir):
             os.makedirs(self.output_dir)
 
+        self.generate_text_string_roms()
+        self.generate_font_data_rom()
         self.generate_bytecode_rom()
+        self.generate_cinematic_rom()
+        self.generate_video2_rom()
         #FIXME! self.generate_screens_rom()
         #TODO: self.generate_samples_rom()
         self.generate_palettes_rom()
-        self.generate_cinematic_rom()
-        self.generate_video2_rom()
-        self.generate_text_and_font_data_roms()
 
 
-    def generate_text_and_font_data_roms(self):
+    def generate_text_string_roms(self):
         '''
             FIXME: This should ideally be extracted from the original game files
             but we currently don't know how to do it, so we keep these hardcoded
@@ -67,11 +68,18 @@ class MSDOSROMSet():
             https://github.com/felipesanches/AnotherWorld_VMTools/issues/15
         '''
         import shutil
-        for filename in ['anotherworld_chargen.rom',
-                         'str_data.rom',
+        for filename in ['str_data.rom',
                          'str_index.rom']:
             shutil.copyfile(f'hardcoded_data/{filename}',
                             f'{self.output_dir}/{filename}')
+
+
+    def generate_font_data_rom(self):
+        # FIXME: This should ideally be extracted from the original game files
+        import shutil
+        filename = 'anotherworld_chargen.rom'
+        shutil.copyfile(f'hardcoded_data/{filename}',
+                        f'{self.output_dir}/{filename}')
 
 
     def generate_bytecode_rom(self):
