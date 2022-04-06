@@ -3,7 +3,12 @@
 # (c) 2022 Felipe Correa da Silva Sanches <juca@members.fsf.org>
 # Licensed under GPL version 2 or later
 
+import os
+import sys
 from exec_trace import ExecTrace
+from releases.common_data.decode_polygons import PolygonDecoder
+
+
 game_level = None
 cinematic_counter = 0
 video2_counter = 0
@@ -404,44 +409,11 @@ class AWVM_Trace(ExecTrace):
             return "; DISASM ERROR! Illegal instruction (opcode = 0x%02X)" % opcode
 
 
-used_pdata = []
-def visited_pdata(addr):
-    """ Keeps track of all polygon data byte addresses that are
-        read during extraction of the artwork data."""
-    global used_pdata
-    if addr not in used_pdata:
-        used_pdata.append(addr)
-
-
-def print_unused_polygon_data():
-    """Prints which ranges of the polygon data have
-       not been ever used in the bytecode."""
-    max_addr = sorted(used_pdata)[-1]
-    state = 0
-    for addr in xrange(max_addr+1):
-        if addr not in used_pdata:
-            if state == 0:
-                start = addr
-                state = 1
-            else:
-                end = addr
-        else:
-            if state == 1:
-                print (f"{hex(start)}-{hex(end)} ({(end-start+1)})")
-                state = 0
-    if state == 1:
-        end = max_addr
-        print (f"{hex(start)}-{hex(end)} ({(end-start+1)})")
-
-
 def makedir(path):
-    import os
     if not os.path.exists(path):
         os.mkdir(path)
 
 
-import os
-import sys
 if len(sys.argv) not in [2, 3]:
     print(f"usage: {sys.argv[0]} <input_dir> [release-name]")
 else:
@@ -476,38 +448,38 @@ else:
     gamerom = f"{romset_dir}/bytecode.rom"
     makedir(disasm_dir)
 
-    from releases.common_data.decode_polygons import PolygonDecoder
     pd = PolygonDecoder(romset_dir,
                         disasm_dir)
 
     num_levels = int(os.path.getsize(gamerom) / 0x10000)
     print(f"Num. levels = {num_levels}")
     for game_level in range(num_levels):
-        print (f"disassembling level {game_level}...")
+        print(f"disassembling level {game_level}...")
         trace = AWVM_Trace(gamerom, rombank=0x10000*game_level, loglevel=0)
         trace.game_level = game_level # TODO: pass this to the constructor
         trace.pending_labeled_entry_points = POSSIBLY_UNUSED_CODEBLOCKS.get(game_level, []).copy()
         trace.current_palette_number = 0
         trace.run()
-#        trace.print_ranges()
-#        trace.print_grouped_ranges()
-#        print_video_entries()
+        #trace.print_ranges()
+        #trace.print_grouped_ranges()
+        #print_video_entries()
 
         level_path = f"{disasm_dir}/level_{game_level}"
         makedir(level_path)
         trace.save_disassembly_listing(f"{level_path}/level-{game_level}.asm")
-        print (f"\t{len(cinematic_entries.keys())} cinematic entries.")
+        print(f"\t{len(cinematic_entries.keys())} cinematic entries.")
 
         # cinematic polygon data:
-        used_pdata = []
+        pd.used_pdata = []
         pd.extract_polygon_data(game_level, cinematic_entries, cinematic=True)
+        #pd.print_unused_polygon_data()
 
         cinematic_entries = {}
         cinematic_counter = 0
-        # print_unused_polygon_data()
 
     # common polygon data:
     print (f"\t{len(video2_entries.keys())} video2 entries.")
+    pd.used_pdata = []
     pd.extract_polygon_data(game_level, video2_entries, cinematic=False)
-
+    #pd.print_unused_polygon_data()
 

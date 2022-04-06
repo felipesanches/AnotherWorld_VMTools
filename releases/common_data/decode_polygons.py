@@ -21,7 +21,40 @@ class PolygonDecoder():
         self.output_dir = output_dir
         self.pdata_offset = None
         self.polygon_data = None
+        self.used_pdata = []
         makedir(output_dir)
+
+
+    def visited_pdata(self, addr):
+        """ Keeps track of all polygon data byte addresses that are
+            read during extraction of the artwork data."""
+        if addr not in self.used_pdata:
+            self.used_pdata.append(addr)
+
+
+    def print_unused_polygon_data(self):
+        """Prints which ranges of the polygon data have
+           not been ever used in the bytecode."""
+        max_addr = sorted(self.used_pdata)[-1]
+        state = 0
+        if len(self.used_pdata) == (max_addr-1):
+            return
+
+        print("Unused polygon data ranges:")
+        for addr in range(max_addr+1):
+            if addr not in self.used_pdata:
+                if state == 0:
+                    start = addr
+                    state = 1
+                else:
+                    end = addr
+            else:
+                if state == 1:
+                    print(f"  {hex(start)}-{hex(end)} ({(end-start+1)} bytes)")
+                    state = 0
+        if state == 1:
+            end = max_addr
+            print(f"  {hex(start)}-{hex(end)} ({(end-start+1)} bytes)")
 
 
     def get_color_from_palette(self, ctx, palNum, color):
@@ -42,7 +75,7 @@ class PolygonDecoder():
             import sys
             sys.exit(-1)
 
-        # visited_pdata(self.pdata_offset)
+        self.visited_pdata(self.pdata_offset)
         self.pdata_offset += 1
         return value
 
