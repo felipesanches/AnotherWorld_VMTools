@@ -16,10 +16,6 @@ class Unpacker():
         v |= ord(self.buffer.read(1))
         return v
 
-    def read(self):
-        self.buffer.seek(0)
-        return self.buffer.read()
-
     def unpack(self, packedData):
         self.buffer = BytesIO(packedData)
         self.input_index = len(packedData) - 4
@@ -71,8 +67,12 @@ class Unpacker():
                     self.raw_bytes(count = 1 + self.getCode(3))
 
             if self.output_index < 0:
-                self.buffer.seek(0)
-                return self.crc == 0
+                if self.crc != 0:
+                    print("ERROR: Failed to unpack data.")
+                    return None
+                else:
+                    self.buffer.seek(0)
+                    return self.buffer.read()
 
 
     def raw_bytes(self, count):
