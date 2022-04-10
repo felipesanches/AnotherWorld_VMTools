@@ -28,7 +28,8 @@ class MSDOSResources():
                        f"\tbankId:{entry['bankId']}"
                        f"\ttype:{self.get_type(entry['type'])}"
                        f"\toffset:{hex(entry['bankOffset'])}"
-                       f"\tsize:{entry['packedSize']}/{entry['size']}")
+                       f"\tsize:{hex(entry['packedSize'])} / {hex(entry['size'])}"
+                       f"\tnext:{hex(entry['bankOffset'] + entry['packedSize'])}")
 
             bank_file = os.path.join(directory, "bank%02x" % entry["bankId"])
             bank = open(bank_file, "rb")
