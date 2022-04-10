@@ -7,30 +7,31 @@ from io import BytesIO
 
 
 class Unpacker():
-    def __init__(self, buf):
-        self.buffer = BytesIO(buf)
-
-
     def READ_BE_UINT32(self):
-        self.buffer.seek(self.index)
-        self.index -= 4
+        self.buffer.seek(self.input_index)
+        self.input_index -= 4
         v = ord(self.buffer.read(1)) << 24
         v |= ord(self.buffer.read(1)) << 16
         v |= ord(self.buffer.read(1)) << 8
         v |= ord(self.buffer.read(1))
         return v
 
+    def read(self):
+        self.buffer.seek(0)
+        return self.buffer.read()
 
-    def unpack(self, packedSize):
-        self.index = packedSize - 4
-        self.size = 0
-        self.raw_data_size = self.READ_BE_UINT32()
-        self.output_idx = self.raw_data_size - 1
+    def unpack(self, packedData):
+        self.buffer = BytesIO(packedData)
+        self.input_index = len(packedData) - 4
+
+        raw_data_size = self.READ_BE_UINT32()
+        self.output_index = raw_data_size - 1
+
         self.crc = self.READ_BE_UINT32()
         self.chk = self.READ_BE_UINT32()
         self.crc ^= self.chk
         while True:
-            if self.nextChunk():
+            if self.nextBit():
                 c = self.getCode(2)
                 if c == 0:
                     # 3 bytes from up to 511 memory positions away
@@ -58,7 +59,7 @@ class Unpacker():
                     # overhead of 11 bits
                     self.raw_bytes(count = 9 + self.getCode(8))
             else:
-                if self.nextChunk():
+                if self.nextBit():
                     # 2 bytes from up to 255 memory positions away
                     # encoded in 10 bits (compresison = 10/16 = approx. 62.5%)
                     self.copy_data(count = 2,
@@ -69,40 +70,39 @@ class Unpacker():
                     # overhead of 4 bits
                     self.raw_bytes(count = 1 + self.getCode(3))
 
-            if self.raw_data_size <= 0:
+            if self.output_index < 0:
+                self.buffer.seek(0)
                 return self.crc == 0
 
 
     def raw_bytes(self, count):
-        self.raw_data_size -= count
         for _ in range(count):
             value = self.getCode(8)
-            self.buffer.seek(self.output_idx)
+            self.buffer.seek(self.output_index)
             self.buffer.write(bytes([value]))
-            self.output_idx -= 1
+            self.output_index -= 1
 
 
     def copy_data(self, count, offset):
-        self.raw_data_size -= count;
         for _ in range(count):
-            self.buffer.seek(self.output_idx + offset)
+            self.buffer.seek(self.output_index + offset)
             value = self.buffer.read(1)
-            self.buffer.seek(self.output_idx)
+            
+            self.buffer.seek(self.output_index)
             self.buffer.write(value)
-            self.output_idx -= 1
+            self.output_index -= 1
 
 
-    def getCode(self, numChunks):
+    def getCode(self, numBits):
         c = 0
-        while numChunks:
-            numChunks -= 1
+        for _ in range(numBits):
             c <<= 1
-            if self.nextChunk():
+            if self.nextBit():
                 c |= 1
         return c
 
 
-    def nextChunk(self):
+    def nextBit(self):
         CF = self.rcr(False)
         if self.chk == 0:
             self.chk = self.READ_BE_UINT32()

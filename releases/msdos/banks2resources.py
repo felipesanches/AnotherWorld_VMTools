@@ -35,10 +35,12 @@ class MSDOSResources():
             bank = open(bank_file, "rb")
             bank.seek(entry["bankOffset"])
             data = bank.read(entry["packedSize"])
-            unpacker = Unpacker(data)
+            packed = entry["packedSize"] != entry["size"]
 
-            if entry["packedSize"] != entry["size"]:
-                success = unpacker.unpack(entry["packedSize"])
+            if packed:
+                unpacker = Unpacker()
+                success = unpacker.unpack(data)
+                data = unpacker.read()
             else:
                 success = True
 
@@ -47,8 +49,6 @@ class MSDOSResources():
             else:
                 bin_filename = os.path.join(self.output_dir,
                                             f"resource-0x{resource_index:02x}.bin")
-                unpacker.buffer.seek(0)
-                data = unpacker.buffer.read()
                 if entry['size'] != len(data):
                     print (f"SHOULD BE {entry['size']} ---- GOT {len(data)}")
                     sys.exit(-1)
