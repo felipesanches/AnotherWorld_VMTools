@@ -5,6 +5,12 @@
 - All scripts require Python 3.
 - There's a MAME fork with an implementation of the Another World VM available at https://github.com/felipesanches/mame/tree/anotherworld which can be used to run any "romset" compiled with the assembler provided by this toolchain. (**Note:** Do not forget to also copy the text-string and font ROMs from the `hardcoded_data` directory to your MAME rompath when running the driver - See also: issue #15)
 
+## Install
+
+You need to first install dependencies by doing:
+
+pip install -r requirements.txt
+
 ## Scripts Descriptions and Use
 
 The simplest way to use this to get bytecode disasm listing (assuming you have a copy of the game files for MSDOS saved on the `original/msdos/` directory) is to perform the following commands:
