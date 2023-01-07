@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 #
 # (c) 2022 Felipe Correa da Silva Sanches <juca@members.fsf.org>
-# Licensed under GPL version 2 or later
+# Licensed under GPL version 3 or later
 #
 # This program extracts game assets from the SEGA Genesis (Europe) Another World
 # cartridge ROM which has the following checksums:

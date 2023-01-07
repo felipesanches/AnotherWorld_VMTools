@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 #
 # (c) 2022 Felipe Correa da Silva Sanches <juca@members.fsf.org>
-# Licensed under GPL version 2 or later
+# Licensed under GPL version 3 or later
 #
 # This program extracts game assets from the Symbian OS Series 60 demo version
 # of Another World which has the following checksums:

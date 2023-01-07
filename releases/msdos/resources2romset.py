@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 #
 # (c) 2020 Felipe Correa da Silva Sanches <juca@members.fsf.org>
-# Licensed under GPL version 2 or later
+# Licensed under GPL version 3 or later
 #
 # This program generates the ROM files needed for the FPGA project at
 # https://github.com/felipesanches/AnotherWorld_FPGA
