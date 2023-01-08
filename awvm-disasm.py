@@ -5,7 +5,7 @@
 
 import os
 import sys
-from exec_trace import ExecTrace
+from exectrace import ExecTrace
 from releases.common_data.decode_polygons import PolygonDecoder
 
 
@@ -455,7 +455,11 @@ else:
     print(f"Num. levels = {num_levels}")
     for game_level in range(num_levels):
         print(f"disassembling level {game_level}...")
-        trace = AWVM_Trace(gamerom, rombank=0x10000*game_level, loglevel=0)
+        RELOCATION_BLOCKS = (
+            # physical,           logical, length 
+            (0x10000*game_level,  0x00000, 0x10000),
+        )
+        trace = AWVM_Trace(gamerom, relocation_blocks=RELOCATION_BLOCKS, loglevel=0)
         trace.game_level = game_level # TODO: pass this to the constructor
         trace.pending_labeled_entry_points = POSSIBLY_UNUSED_CODEBLOCKS.get(game_level, []).copy()
         trace.current_palette_number = 0

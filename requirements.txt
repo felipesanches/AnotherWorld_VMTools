@@ -1,2 +1,2 @@
-exectrace==0.0.1
+exectrace==0.0.2
 pycairo==1.21.0
