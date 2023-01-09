@@ -119,6 +119,7 @@ def getVariableName(value):
 
 class AWVM_Trace(ExecTrace):
     def get_label(self, addr):
+        self.register_label(addr)
         if addr in KNOWN_LABELS.get(self.game_level, []):
             return KNOWN_LABELS[self.game_level][addr]
         elif addr in POSSIBLY_UNUSED_CODEBLOCKS.get(self.game_level, []):
