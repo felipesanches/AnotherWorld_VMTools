@@ -118,7 +118,7 @@ def getVariableName(value):
 
 
 class AWVM_Trace(ExecTrace):
-    def get_label(self, addr):
+    def getLabelName(self, addr):
         self.register_label(addr)
         if addr in KNOWN_LABELS.get(self.game_level, []):
             return KNOWN_LABELS[self.game_level][addr]
@@ -228,7 +228,7 @@ class AWVM_Trace(ExecTrace):
             address = self.fetch()
             address = (address << 8) | self.fetch()
             self.subroutine(address)
-            return "call %s" % self.get_label(address)
+            return "call %s" % self.getLabelName(address)
 
         elif opcode == 0x05: # ret
             self.return_from_subroutine()
@@ -241,14 +241,14 @@ class AWVM_Trace(ExecTrace):
             address = self.fetch()
             address = (address << 8) | self.fetch()
             self.unconditional_jump(address)
-            return "jmp %s" % self.get_label(address)
+            return "jmp %s" % self.getLabelName(address)
 
         elif opcode == 0x08: # setVec
             threadId = self.fetch();
             pcOffsetRequested = self.fetch()
             pcOffsetRequested = (pcOffsetRequested << 8) | self.fetch()
             self.schedule_entry_point(pcOffsetRequested, needs_label=True)
-            return "setup channel=0x%02X, address=%s" % (threadId, self.get_label(pcOffsetRequested))
+            return "setup channel=0x%02X, address=%s" % (threadId, self.getLabelName(pcOffsetRequested))
 
         elif opcode == 0x09: # djnz = Decrement and Jump if Not Zero
             var = self.fetch();
@@ -256,7 +256,7 @@ class AWVM_Trace(ExecTrace):
             offset = (offset << 8) | self.fetch()
             varName = getVariableName(var)
             self.conditional_branch(offset)
-            return "djnz [%s], %s" % (varName, self.get_label(offset))
+            return "djnz [%s], %s" % (varName, self.getLabelName(offset))
 
         elif opcode == 0x0a: # Conditional Jump instructions
             subopcode = self.fetch()
@@ -296,7 +296,7 @@ class AWVM_Trace(ExecTrace):
                 return "; DISASM ERROR! Conditional JMP instruction with invalid condition (%d)" % condition
 
             self.conditional_branch(offset)
-            line += ", %s, %s" % (midterm, self.get_label(offset))
+            line += ", %s, %s" % (midterm, self.getLabelName(offset))
             return line
 
         elif opcode == 0x0b: # setPalette
@@ -460,9 +460,12 @@ else:
             # physical,           logical, length 
             (0x10000*game_level,  0x00000, 0x10000),
         )
-        trace = AWVM_Trace(gamerom, relocation_blocks=RELOCATION_BLOCKS, loglevel=0)
+        trace = AWVM_Trace(gamerom,
+                           relocation_blocks=RELOCATION_BLOCKS,
+                           subroutines=POSSIBLY_UNUSED_CODEBLOCKS.get(game_level, []).copy(),
+                           labels=KNOWN_LABELS.get(game_level, {}).copy(),
+                           loglevel=0)
         trace.game_level = game_level # TODO: pass this to the constructor
-        trace.pending_labeled_entry_points = POSSIBLY_UNUSED_CODEBLOCKS.get(game_level, []).copy()
         trace.current_palette_number = 0
         trace.run()
         #trace.print_ranges()
