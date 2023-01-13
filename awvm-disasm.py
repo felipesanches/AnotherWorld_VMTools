@@ -92,6 +92,34 @@ def print_video_entries():
         print (f"label:{v['label']}: VIDEO2: 0x{addr:04X} x:{v['x']} y:{v['y']} zoom:{v['zoom']}")
 
 
+# TODO:
+#       Add to ExecTrace a mechanism for declaring variable names
+#       For most CPUs it would mean giving labels for RAM addresses.
+#       For the Another World VM it would be a way to give names to
+#       the VM vars, which includes the special purpose ones listed
+#       below, but would also include level-specific variables.
+#
+#       For instance, on level #2 (the game's first stage),
+#       variable 0x2A seems to be used to keep track of the sequencing
+#       of events/scenes throughout the stage. So that the beast only
+#       up once in the background of the first screen. And then only
+#       on the second screen, and so on...
+#       For that reason, var 0x2A on stage 2 could be called
+#       something like "CURRENT_SCENE".
+#
+#       Also, a good name for var 0x66 on stage 2 seems to be
+#       "CURRENTLY_CACHED_RENDERING_OF_SCENARIO_BACKGROUND".
+#
+#       var 0x01 = LESTER_X_COORDINATE (min: 0, max:320)
+#       And I guess var 0x02 is LESTER_Y_COORDINATE, but I still need
+#       to double check that interpretation, as well as the min/max values.
+#
+#       Other variables, though, seem to be reused, having different
+#       meanings across the bytecode of a single stage.
+#       That would be a bit trickier to document for a nice dissembly,
+#       because it would require some mechanism for defining variable
+#       scopes. 
+#
 SPECIAL_PURPOSE_VARS = {
     0x3c: "RANDOM_SEED",
     0x54: "HACK_VAR_54",
