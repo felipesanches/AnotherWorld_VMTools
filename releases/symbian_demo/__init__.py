@@ -1,4 +1,4 @@
-from releases.common_data import LABELED_CINEMATIC_ENTRIES
+from releases import common_data
 
 def generate_romset(input_dir, output_dir):
     from releases.symbian_demo.symbian2romset import SymbianDemoROMSet
@@ -30,3 +30,13 @@ KNOWN_LABELS = {
     # TODO
 }
 
+LABELED_CINEMATIC_ENTRIES = {
+  0: common_data.LABELED_CINEMATIC_ENTRIES.get(1, []),
+  1: common_data.LABELED_CINEMATIC_ENTRIES.get(2, []),
+  2: common_data.LABELED_CINEMATIC_ENTRIES.get(3, []),
+  3: common_data.LABELED_CINEMATIC_ENTRIES.get(4, []),
+  4: common_data.LABELED_CINEMATIC_ENTRIES.get(5, []),
+  5: common_data.LABELED_CINEMATIC_ENTRIES.get(6, []),
+  6: common_data.LABELED_CINEMATIC_ENTRIES.get(7, []),
+  7: common_data.LABELED_CINEMATIC_ENTRIES.get(8, []),
+}

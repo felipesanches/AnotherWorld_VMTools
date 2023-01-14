@@ -33,13 +33,32 @@ class SymbianDemoROMSet():
         self.generate_cinematic_rom()
         #self.generate_video2_rom()
 
+    def generate_bytecode_rom(self):
+        import sys
+        print("Extracting BYTECODE...")
+        chunks = [
+            # Apparently this release does not have a level 0 bytecode (which on msdos is the codewheel screen)
+            (0x49D8C, 0x4B38F), # level 1
+            (0x55F55, 0x587A6), # level 2
+            (0x60A5B, 0x6551D), # level 3
+            (0x6CA75, 0x73E92), # level 4
+            (0x7D4DC, 0x7E65A), # level 5
+            (0x81B7E, 0x87A59), # level 6
+            (0x8FDA0, 0x903E8), # level 7
+            (0xC335B, 0xC39CE), # level 8
+        ]
+        self.extract_resource(f"{self.output_dir}/bytecode.rom", chunks)
+
 
     def generate_cinematic_rom(self):
+        print("Extracting CINEMATIC data...")
+        self.extract_resource(f"{self.output_dir}/cinematic.rom", [(0x6551E, 0x6C675)])
+
+    def extract_resource(self, filename, compressed_chunks):
         import lzma
-        cinematic_rom = open(f"{self.output_dir}/cinematic.rom", "wb")    
-        cinematic_compressed_chunks = [(0x6551E, 8388608)]
-        for offset, length in cinematic_compressed_chunks:
-            decompressed = lzma.LZMADecompressor().decompress(data=self.raw[offset:offset+length])            
+        cinematic_rom = open(filename, "wb")
+        for start, end in compressed_chunks:
+            decompressed = lzma.LZMADecompressor().decompress(data=self.raw[start:end])
             for addr in range(0x10000):
                 if addr < len(decompressed):
                     cinematic_rom.write(bytes([decompressed[addr]]))
