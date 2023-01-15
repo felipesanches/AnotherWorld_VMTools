@@ -1,4 +1,4 @@
-from releases import common_data
+from releases import common_data, genesis_europe
 
 def generate_romset(input_dir, output_dir):
     from releases.snes.snes2romset import SNESROMSet
@@ -25,14 +25,16 @@ MD5_CHECKSUMS = {
 }
  
 LABELED_CINEMATIC_ENTRIES = {
-  0: common_data.LABELED_CINEMATIC_ENTRIES.get(1, []),
+  0: common_data.LABELED_CINEMATIC_ENTRIES.get(2, []),
 }
 
 
 POSSIBLY_UNUSED_CODEBLOCKS = {
+  0: genesis_europe.POSSIBLY_UNUSED_CODEBLOCKS.get(0, []),
 }
 
 
 KNOWN_LABELS = {
+  0: genesis_europe.KNOWN_LABELS.get(0, {}),
 }
 
