@@ -60,13 +60,13 @@ class GenesisEuropeROMSet():
 
     def generate_bytecode_rom(self):
         bytecode_rom = open(f"{self.output_dir}/bytecode.rom", "wb")
-        chunks = [(0x3f576, 0x51FD),  # Arrival + beast run    # FIXME: wrong-length
-                  (0x5281a, 0x9c8c),      # TODO: verify
-                  (0x693e8, 0x10000),     # FIXME: wrong-length
-                  (0x88716, 0x10000),     # FIXME: wrong-length
-                  (0x919a0, 0x10000),     # FIXME: wrong-length
-                  (0xbcab8, 0x10000),     # FIXME: wrong-length
-                  (0xada78, 0x10000),     # FIXME: wrong-length
+        chunks = [(0x3f576, 0x51fe),  # Arrival + beast run
+                  (0x5281a, 0x9c9a),  # Jail   TODO: verify length
+                  (0x693e8, 0xf564),  # ...    TODO: verify length
+                  (0x88716, 0x1f88),  # ...    TODO: verify length
+                  (0x919a0, 0xc714),  # ...    TODO: verify length
+                  (0xbcab8, 0x0b5a),  # ...    TODO: verify length
+                  (0xada78, 0x0be4),  # ...    TODO: verify length
                  ]
 
         for offset, length in chunks:
@@ -80,8 +80,16 @@ class GenesisEuropeROMSet():
 
     def generate_cinematic_rom(self):
         cinematic_rom = open(f"{self.output_dir}/cinematic.rom", "wb")    
-        cinematic_offsets = [0x44774, 0x5c4b4, 0x7894c, 0x8a69e, 0x9e0b4, 0xbd612, 0xae65c]
+        cinematic_offsets = [0x44774,  # Arrival + beast run
+                             0x5c4b4,  # Jail
+                             0x7894c,  # ...
+                             0x8a69e,  # ...
+                             0x9e0b4,  # ...
+                             0xbd612,  # ...
+                             0xae65c,  # ...
+                            ]
 
+        # FIXME: We should also specify lengths here.
         for offset in cinematic_offsets:
             for i in range(0x10000):
                 addr = offset + i
