@@ -31,8 +31,8 @@ class SNESROMSet():
         import sys
         print("Extracting BYTECODE...")
         chunks = [
-            (0x81CB0, 0x10000), # level 1
-            (0x74A4C, 0x10000), # level 2
+            (0x74A4C, 0x10000), # Intro Sequence       # FIXME: wrong-length
+            (0x81CB0, 0x51FD),  # Arrival + Beast run
         ]
         self.extract_resource(f"{self.output_dir}/bytecode.rom", chunks)
 

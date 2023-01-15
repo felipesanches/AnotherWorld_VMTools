@@ -60,13 +60,19 @@ class GenesisEuropeROMSet():
 
     def generate_bytecode_rom(self):
         bytecode_rom = open(f"{self.output_dir}/bytecode.rom", "wb")
-        # offs:0x5281a len: 9c8c
-        bytecode_offsets = [0x3f576, 0x5281a, 0x693e8, 0x88716, 0x919a0, 0xbcab8, 0xada78]
+        chunks = [(0x3f576, 0x51FD),  # Arrival + beast run    # FIXME: wrong-length
+                  (0x5281a, 0x9c8c),      # TODO: verify
+                  (0x693e8, 0x10000),     # FIXME: wrong-length
+                  (0x88716, 0x10000),     # FIXME: wrong-length
+                  (0x919a0, 0x10000),     # FIXME: wrong-length
+                  (0xbcab8, 0x10000),     # FIXME: wrong-length
+                  (0xada78, 0x10000),     # FIXME: wrong-length
+                 ]
 
-        for offset in bytecode_offsets:
+        for offset, length in chunks:
             for i in range(0x10000):
                 addr = offset + i
-                if offset != -1 and addr < len(self.data):
+                if offset != -1 and addr < len(self.data) and i < length:
                     bytecode_rom.write(bytes([self.data[addr]]))
                 else:
                     bytecode_rom.write(bytes([0xFF]))

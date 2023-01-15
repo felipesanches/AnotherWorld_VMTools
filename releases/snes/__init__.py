@@ -25,16 +25,23 @@ MD5_CHECKSUMS = {
 }
  
 LABELED_CINEMATIC_ENTRIES = {
-  0: common_data.LABELED_CINEMATIC_ENTRIES.get(2, []),
+  0: common_data.LABELED_CINEMATIC_ENTRIES.get(0, []),
+  1: common_data.LABELED_CINEMATIC_ENTRIES.get(2, []),
+#  2: common_data.LABELED_CINEMATIC_ENTRIES.get(3, []),
+#  3: common_data.LABELED_CINEMATIC_ENTRIES.get(4, []),
+#  4: common_data.LABELED_CINEMATIC_ENTRIES.get(5, []),
+#  5: common_data.LABELED_CINEMATIC_ENTRIES.get(6, []),
+#  6: common_data.LABELED_CINEMATIC_ENTRIES.get(7, []),
 }
 
 
+# The SEGA Genesis game does not include the game intro sequence and the codewheel screen
 POSSIBLY_UNUSED_CODEBLOCKS = {
-  0: genesis_europe.POSSIBLY_UNUSED_CODEBLOCKS.get(0, []),
+  1: genesis_europe.POSSIBLY_UNUSED_CODEBLOCKS.get(0, []), # Arrival + beast run
 }
 
 
 KNOWN_LABELS = {
-  0: genesis_europe.KNOWN_LABELS.get(0, {}),
+  1: genesis_europe.KNOWN_LABELS.get(0, {}), # Arrival + beast run
 }
 
