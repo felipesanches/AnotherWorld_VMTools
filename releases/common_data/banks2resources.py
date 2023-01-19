@@ -10,10 +10,10 @@ from releases.common_data.Unpacker import Unpacker
 class Resources():
     def __init__(self, input_dir, output_dir, memlist):
         self.input_dir = input_dir
-        self.output_dir = f"{output_dir}/msdos/resources"
+        self.output_dir = f"{output_dir}/resources"
         self.memlist = memlist
 
-    def generate(self):
+    def generate(self, uppercase):
         import os
         if not os.path.exists(self.output_dir):
             os.makedirs(self.output_dir)
@@ -29,7 +29,14 @@ class Resources():
                        f"\tsize:{hex(entry['packedSize'])} / {hex(entry['size'])}"
                        f"\tnext:{hex(entry['bankOffset'] + entry['packedSize'])}")
 
-            bank_file = os.path.join(self.input_dir, "bank%02x" % entry["bankId"])
+            if uppercase:
+                bank_file = os.path.join(self.input_dir, "bank%02X" % entry["bankId"])
+            else:
+                bank_file = os.path.join(self.input_dir, "bank%02x" % entry["bankId"])
+            if not os.path.exists(bank_file):
+                print (f"Not found: {bank_file}")
+                continue
+
             bank = open(bank_file, "rb")
             bank.seek(entry["bankOffset"])
             data = bank.read(entry["packedSize"])
@@ -61,9 +68,8 @@ class Resources():
         return v
 
     def read_mem_entry(self, memlist, n):
-        memlist.seek(20*n)
+        memlist.seek(20*n + 1)
         entry = {}
-        entry["size"] = self.read_byte(memlist)
         entry["type"] = self.read_byte(memlist)
         entry["unknown_0x02"] = self.read_word(memlist) # unknown
         entry["unknown_0x04"] = self.read_word(memlist) # unknown

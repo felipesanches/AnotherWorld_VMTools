@@ -41,8 +41,8 @@ def generate_romset(input_dir, output_dir):
     memlist = open(memlist_filename, "rb")
 
     # TODO: validate checksums of the original files
-    resources = Resources(input_dir, output_dir, memlist)
-    resources.generate()
+    resources = Resources(input_dir, output_dir+"/msdos", memlist)
+    resources.generate(uppercase=False)
     resources_dir = f"{output_dir}/msdos/resources"
 
     romset = ROMSet(resources_dir, output_dir+"/msdos", resource_ids)
