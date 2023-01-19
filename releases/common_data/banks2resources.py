@@ -5,21 +5,19 @@
 
 import os
 import sys
-from releases.msdos.Unpacker import Unpacker
+from releases.common_data.Unpacker import Unpacker
 
-class MSDOSResources():
-    def __init__(self, input_dir, output_dir):
+class Resources():
+    def __init__(self, input_dir, output_dir, memlist):
         self.input_dir = input_dir
         self.output_dir = f"{output_dir}/msdos/resources"
-        self.memlist_filename = f"{input_dir}/memlist.bin"
-
+        self.memlist = memlist
 
     def generate(self):
         import os
         if not os.path.exists(self.output_dir):
             os.makedirs(self.output_dir)
 
-        directory = os.path.dirname(self.memlist_filename)
         entries = self.load_memlist()
 
         for resource_index, entry in enumerate(entries):
@@ -31,7 +29,7 @@ class MSDOSResources():
                        f"\tsize:{hex(entry['packedSize'])} / {hex(entry['size'])}"
                        f"\tnext:{hex(entry['bankOffset'] + entry['packedSize'])}")
 
-            bank_file = os.path.join(directory, "bank%02x" % entry["bankId"])
+            bank_file = os.path.join(self.input_dir, "bank%02x" % entry["bankId"])
             bank = open(bank_file, "rb")
             bank.seek(entry["bankOffset"])
             data = bank.read(entry["packedSize"])
@@ -80,16 +78,11 @@ class MSDOSResources():
 
 
     def load_memlist(self):
-        if not os.path.exists(self.memlist_filename):
-            print (f"Memlist file was not found at: {self.memlist_filename}")
-            sys.exit(-1)
-
-        memlist = open(self.memlist_filename, "rb")
         mem_entries = []
 
         i = 0
         while True:
-            entry = self.read_mem_entry(memlist, i)
+            entry = self.read_mem_entry(self.memlist, i)
             if entry["bankOffset"] == 0xFFFFFFFF:
                 return mem_entries
             mem_entries.append(entry)
@@ -109,15 +102,3 @@ class MSDOSResources():
             return res_types[i]
         else:
             return f"UNKNOWN({i})"
-
-
-if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        print (f"usage: {sys.argv[0]} <input_dir> <output_dir>\n")
-        sys.exit(-1)
-
-    input_dir = sys.argv[1]
-    output_dir = sys.argv[2]
-
-    resources = MSDOSResources(input_dir, output_dir)
-    resources.generate()
