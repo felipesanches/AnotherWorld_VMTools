@@ -508,7 +508,7 @@ else:
 
         level_path = f"{disasm_dir}/level_{game_level}"
         makedir(level_path)
-        trace.save_disassembly_listing(f"{level_path}/level-{game_level}.asm")
+        trace.save_disassembly_listing(f"{level_path}/{release_name}_level-{game_level}.asm")
         print(f"\t{len(cinematic_entries.keys())} cinematic entries.")
 
         # cinematic polygon data:
