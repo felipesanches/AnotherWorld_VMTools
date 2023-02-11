@@ -23,6 +23,16 @@ MD5_CHECKSUMS = {
     'str_index.rom': 'BAD_DUMP 254a3e2c0a84fde07a600618b3e32744', # copied from Fabien Sanglard's engine / msdos release
     'video2.rom': '?',
 }
+
+STAGE_TITLES = [
+  "Arrival at the Lake & Beast Chase",  # 0
+  "Prison",                             # 1
+#  "TODO - Name this stage (bank number #2)",
+#  "TODO - Name this stage (bank number #3)",
+#  "TODO - Name this stage (bank number #4)",
+#  "TODO - Name this stage (bank number #5)",
+#  "Secret Code Entry Screen",  # 6
+]
  
 LABELED_CINEMATIC_ENTRIES = {
   0: common_data.LABELED_CINEMATIC_ENTRIES.get(0, []),

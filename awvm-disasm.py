@@ -424,7 +424,10 @@ class AWVM_Trace(ExecTrace):
         elif opcode == 0x19: # load
             immediate = self.fetch()
             immediate = (immediate << 8) | self.fetch()
-            return "load id=0x%04X" % immediate
+            if (immediate > 0x100) and ((immediate & 0xf) < len(STAGE_TITLES)):
+                return "bank_switch %d;  %s" % (immediate & 0xf, STAGE_TITLES[immediate & 0xf])
+            else:
+                return "load id=0x%04X" % immediate
 
         elif opcode == 0x1a: # song
             resNum = self.fetch()
@@ -455,11 +458,13 @@ else:
         try:
             data = __import__(name=f"releases.{release_name}",
                               fromlist=["MD5_CHECKSUMS",
+                                        "STAGE_TITLES",
                                         "LABELED_CINEMATIC_ENTRIES",
                                         "POSSIBLY_UNUSED_CODEBLOCKS",
                                         "KNOWN_LABELS",
                                         "generate_romset"])
             MD5_CHECKSUMS=data.MD5_CHECKSUMS
+            STAGE_TITLES=data.STAGE_TITLES
             LABELED_CINEMATIC_ENTRIES = data.LABELED_CINEMATIC_ENTRIES
             KNOWN_LABELS = data.KNOWN_LABELS
             POSSIBLY_UNUSED_CODEBLOCKS = data.POSSIBLY_UNUSED_CODEBLOCKS

@@ -34,6 +34,18 @@ def generate_romset(input_dir, output_dir):
     # TODO: validate checksums of generated ROM set
     #       according to the checksums listed below
 
+STAGE_TITLES = [
+  "Code-wheel screen",                 # 0
+  "Intro Sequence",                    # 1
+  "Arrival at the Lake & Beast Chase", # 2
+  "Prison",                            # 3
+  "TODO - Name this stage (bank number #4)",
+  "TODO - Name this stage (bank number #5)",
+  "TODO - Name this stage (bank number #6)",
+  "TODO - Name this stage (bank number #7)",
+  "TODO - Name this stage (bank number #8)",
+  "Secret Code Entry Screen",
+]
 
 MD5_CHECKSUMS = {
     'bytecode.rom': '?',

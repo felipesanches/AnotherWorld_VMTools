@@ -113,6 +113,19 @@ POSSIBLY_UNUSED_CODEBLOCKS = {
       0x1088]
 }
 
+STAGE_TITLES = [
+  "Code-wheel screen",                 # 0
+  "Intro Sequence",                    # 1
+  "Arrival at the Lake & Beast Chase", # 2
+  "Prison",                            # 3
+  "TODO - Name this stage (bank number #4)",
+  "TODO - Name this stage (bank number #5)",
+  "TODO - Name this stage (bank number #6)",
+  "TODO - Name this stage (bank number #7)",
+  "TODO - Name this stage (bank number #8)",
+  "Secret Code Entry Screen",
+]
+
 KNOWN_LABELS = {
   1: {
     0x0219: "DNA_ANIMATION",

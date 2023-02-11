@@ -22,6 +22,18 @@ MD5_CHECKSUMS = {
     #'video2.rom': ''
 }
 
+# FIXME: This needs to be reviewed:
+STAGE_TITLES = [
+  "Code-wheel screen",                 # 0
+  "Arrival at the Lake & Beast Chase", # 1
+  "Prison",                            # 2
+  "TODO - Name this stage (bank number #3)",
+  "TODO - Name this stage (bank number #4)",
+  "TODO - Name this stage (bank number #5)",
+  "TODO - Name this stage (bank number #6)",
+  "Secret Code Entry Screen",
+]
+
 POSSIBLY_UNUSED_CODEBLOCKS = {
   1: [0x00B1],
 }

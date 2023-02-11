@@ -27,6 +27,16 @@ MD5_CHECKSUMS = {
 # Note:
 # The SEGA Genesis game does not include the game intro sequence and the codewheel screen
 # which are typically the first two sets of bytecode/cinematic entries
+STAGE_TITLES = [
+  "Arrival at the Lake & Beast Chase",  # 0
+  "Prison",                             # 1
+  "TODO - Name this stage (bank number #2)",
+  "TODO - Name this stage (bank number #3)",
+  "TODO - Name this stage (bank number #4)",
+  "TODO - Name this stage (bank number #5)",
+  "Secret Code Entry Screen",  # 6
+]
+
  
 LABELED_CINEMATIC_ENTRIES = {
   0: common_data.LABELED_CINEMATIC_ENTRIES.get(2, []),
