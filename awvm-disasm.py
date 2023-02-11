@@ -23,17 +23,18 @@ CINEMATIC=1 # level-specific bank of polygonal data
 
 def get_text_string(str_id):
     global str_data
-    try:
-        if not str_data:
-            str_data = open(f"{romset_dir}/str_data.rom", "rb").read()
+    if not str_data:
+        str_data = open(f"{romset_dir}/str_data.rom", "rb").read()
 
-        str_index = open(f"{romset_dir}/str_index.rom", "rb")
-        str_index.seek((str_id-1)*2)
-        str_index.read(1)
-        index = ord(str_index.read(1))
-        index = index << 8 | ord(str_index.read(1))
-        str_index.close()
+    str_index = open(f"{romset_dir}/str_index.rom", "rb")
+    str_index.seek((str_id)*2)
+    index = ord(str_index.read(1))
+    index = index | (ord(str_index.read(1)) << 8)
+    str_index.close()
 
+    if index == 0:
+        the_string = f"string_{str_id:04X}"
+    else:
         the_string = ""
         while str_data[index] != 0x00:
             c = chr(str_data[index])
@@ -41,8 +42,11 @@ def get_text_string(str_id):
                 c = "\\n"
             the_string += c
             index += 1
-    except:
-        the_string = f"string_{str_id}"
+
+    # Note: I think that the string with index 0x01FA, referenced by msdos level #2,
+    #       fails to load because it was an asset of the demo version.
+    #       Once we implement extracting strings from ANOTHER.EXE, this should be sorted out.
+
     return the_string
 
 
