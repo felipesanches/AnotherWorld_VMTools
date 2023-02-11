@@ -29,7 +29,7 @@ class SymbianDemoROMSet():
         if not os.path.exists(self.output_dir):
             os.makedirs(self.output_dir)
 
-        #self.generate_bytecode_rom()
+        self.generate_bytecode_rom()
         self.generate_cinematic_rom()
         #self.generate_video2_rom()
 

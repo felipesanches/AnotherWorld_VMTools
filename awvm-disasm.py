@@ -462,6 +462,8 @@ else:
         except ImportError:
             sys.exit(f"ERROR: Unrecognized release name '{release_name}'")
 
+        print(f"\n=== {release_name} ===")
+
         output_dir = f"{os.getcwd()}/output"
         disasm_dir = f"{output_dir}/{release_name}/disasm"
         romset_dir = f"{output_dir}/{release_name}/romset"
