@@ -1,10 +1,10 @@
 resource_ids = {
-    "bytecode": [0x15, 0x18, 0x1b, 0x1e, 0x21, 0x24, 0x27, 0x2a],
+    "bytecode": [0x15, 0x18, 0x1b, 0x1e, 0x21, 0x24, 0x27, 0x2a, 0x7e],
     "screen": [], # TODO
     "music": [], # TODO
     "sample": [], # TODO
-    "palette": [0x14, 0x17, 0x1a, 0x1d, 0x20, 0x23, 0x26, 0x29],
-    "cinematic": [0x16, 0x19, 0x1c, 0x1f, 0x22, 0x25, 0x28],
+    "palette": [0x14, 0x17, 0x1a, 0x1d, 0x20, 0x23, 0x26, 0x29, 0x7d],
+    "cinematic": [0x16, 0x19, 0x1c, 0x1f, 0x22, 0x25, 0x28, 0x7f],
     "video2": [0x11]
 }
 
@@ -35,17 +35,23 @@ def generate_romset(input_dir, output_dir):
     #       according to the checksums listed below
 
 STAGE_TITLES = [
-  "Code-wheel screen",                 # 0
-  "Intro Sequence",                    # 1
-  "Arrival at the Lake & Beast Chase", # 2
-  "Prison",                            # 3
-  "TODO - Name this stage (bank number #4)",
-  "TODO - Name this stage (bank number #5)",
-  "TODO - Name this stage (bank number #6)",
-  "TODO - Name this stage (bank number #7)",
-  "TODO - Name this stage (bank number #8)",
-  "Secret Code Entry Screen",
+  "Code-wheel screen",                 # bank 0 Default entry-point.
+  "Intro Sequence",                    # bank 1 Runs cleanly.
+  "Arrival at the Lake & Beast Chase", # bank 2 Requires [0xBC]=0x0010; [0xC6]=0x0080; [0xDC]=0x0021; [0xF2]=0x1770
+  "Prison Escape",                     # bank 3 Requires [0xBC]=0x0010; [0xF2]=0x1770
+  "Gas tunnels, Caves and Pool",       # bank 4 Requires [0xBC]=0x0010; [0xC6]=0x0080; [0xDC]=0x0021; [0xF2]=0x1770
+  "Tank in the Battle Arena",          # bank 5 Runs cleanly.
+  "Capsule Lands at the Bath",         # bank 6 Requires [0xF2]=0x1770
+  "Game Ending Sequence",              # bank 7 Requires [0xF2]=0x1770
+  "Secret Code Entry Screen",          # bank 8 Requires [0xBC]=0x0010; [0xC6]=0x0080; [0xDC]=0x0021; [0xF2]=0x1770
 ]
+
+# At bank 2 "Arrival", there's a beetle walking left. I was never able to make Lester interact with it in any manner, even though I've seen graphical assets of animations of it walking to the right, flipping upside down, opening its wings, and perhaps even flying. There's also some routines in the bytecode, but I was not yet able to fully understand that portion of the code. This seems to be an unfinished feature. On the MSDOS version it does not appear at all, but I was once able to glitch the code and saw an animation of it flying. I should inspect it more carefully.
+
+# At bank 3 "Prison Escape", the jail swings more easily/quickly in the Amiga version, if compared to the MSDOS one.
+# Another difference that I noticed: the MSDOS version adds a guard to the lowest floor of the elevator.
+
+# At bank 4 "Gas tunnels", on the Amiga version the gas jets are not poisonous as they are in the MSDOS version, and are also positioned in different places.
 
 MD5_CHECKSUMS = {
     'bytecode.rom': '?',
@@ -145,6 +151,12 @@ KNOWN_LABELS = {
     0x3F1F: "SINKING_AT_CONSOLE",
     # 0x????: "SWIMMING_UP",
     0x3F54: "UPDATE_POSITION_OF_BUBBLES",
+  },
+  3: {
+    0x0080: "LIKELY_A_COPY_PROTECTION_MECHANISM",
+  },
+  4: {
+    0x0081: "LIKELY_A_COPY_PROTECTION_MECHANISM",
   }
 }
 
