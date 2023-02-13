@@ -375,7 +375,7 @@ def assemble(input_filename):
             label = parse_label(line)
             line = line.split(":")[1]
 
-        for instruction_name in ["org", "bank_switch", "db", "mov", "add", "sub", "jmp",
+        for instruction_name in ["org", "bankSwitch", "db", "mov", "add", "sub", "jmp",
                                  "call", "ret", "break", "setPalette",
                                  "selectVideoPage", "copyVideoPage",
                                  "blitFramebuffer", "video", "fill",
