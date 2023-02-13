@@ -114,16 +114,15 @@ POSSIBLY_UNUSED_CODEBLOCKS = {
 }
 
 STAGE_TITLES = [
-  "Code-wheel screen",                 # 0
-  "Intro Sequence",                    # 1
-  "Arrival at the Lake & Beast Chase", # 2
-  "Prison",                            # 3
-  "TODO - Name this stage (bank number #4)",
-  "TODO - Name this stage (bank number #5)",
-  "TODO - Name this stage (bank number #6)",
-  "TODO - Name this stage (bank number #7)",
-  "TODO - Name this stage (bank number #8)",
-  "Secret Code Entry Screen",
+  "Code-wheel screen",                 # bank 0 Default entry-point.
+  "Intro Sequence",                    # bank 1 Runs cleanly.
+  "Arrival at the Lake & Beast Chase", # bank 2 Requires [0xBC]=0x0010; [0xDC]=0x0021; [0xF2]=0x0FA0
+  "Prison Escape",                     # bank 3 Runs cleanly.
+  "Gas tunnels, Caves and Pool",       # bank 4	Requires [0xBC]=0x0010; [0xC6]=0x0080; [0xDC], 0x0021; [0xF2]=0x0FA0 (and also [E4] != 14)
+  "Tank in the Battle Arena",          # bank 5 Runs cleanly.
+  "Capsule Lands at the Bath",         # bank 6 Requires [0xF2]=0x0FA0
+  "Game Ending Sequence",              # bank 7 Requires [0xF2]=0x0FA0
+  "Secret Code Entry Screen",          # bank 8	Requires [0xBC]=0x0010; [0xC6]=0x0080; [0xDC]=0x0021; [0xF2]=0x0FA0
 ]
 
 KNOWN_LABELS = {
@@ -201,6 +200,15 @@ KNOWN_LABELS = {
     0x4069: "SINKING_AT_CONSOLE",
     0x407C: "SWIMMING_UP",
     0x40A5: "UPDATE_POSITION_OF_BUBBLES",
+  },
+  4: {
+    0x0081: "LIKELY_A_COPY_PROTECTION_MECHANISM",
+  },
+  7: {
+    0x0025: "LIKELY_A_COPY_PROTECTION_MECHANISM",
+  }
+  8: {
+    0x0179: "LIKELY_A_COPY_PROTECTION_MECHANISM",
   }
 }
 

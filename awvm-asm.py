@@ -76,6 +76,10 @@ def word(v, negative=False):
             print (f"Symbol '{v}' could not be found.")
 
 def encode(instr):
+    if instr["name"] == "org":
+        pass  #  for now we ignore this, as it is always 0x0000 for AW VM
+              #  (at least for the original game bytecode)
+
     if instr["name"] == "db":
         for data_byte in instr["operands"]:
             byte(data_byte["value"])
@@ -248,6 +252,13 @@ def encode(instr):
         byte(0x19)
         word(ops["id"]["value"])
 
+    elif instr["name"] == "bankSwitch":
+        bankId = instr["operands"][0]
+        byte(0x19)
+        if bankId["value"] > 0xf:
+            print ("ERROR: 'bankSwitch' instruction has bankId grater than 15.")
+        word(0x3E80 | bankId["value"])
+
     elif instr["name"] == "selectVideoPage":
         pageId = instr["operands"][0]
         byte(0x0D)
@@ -364,7 +375,7 @@ def assemble(input_filename):
             label = parse_label(line)
             line = line.split(":")[1]
 
-        for instruction_name in ["db", "mov", "add", "sub", "jmp",
+        for instruction_name in ["org", "bank_switch", "db", "mov", "add", "sub", "jmp",
                                  "call", "ret", "break", "setPalette",
                                  "selectVideoPage", "copyVideoPage",
                                  "blitFramebuffer", "video", "fill",

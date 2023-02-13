@@ -425,7 +425,12 @@ class AWVM_Trace(ExecTrace):
             immediate = self.fetch()
             immediate = (immediate << 8) | self.fetch()
             if (immediate > 0x100) and ((immediate & 0xf) < len(STAGE_TITLES)):
-                return "bank_switch %d;  %s" % (immediate & 0xf, STAGE_TITLES[immediate & 0xf])
+                if immediate & 0xfff0 != 0x3E80:
+                    print(f"WARN: Found an instance of the load instruction indicating"
+                          f" a bankSwitch but with an uncommon value of {immediate:04X}"
+                          f" in its operands.\n"
+                          f"Expected to see {0x3E80 | (immediate & 0xf):04X} instead.")
+                return "bankSwitch %d;  %s" % (immediate & 0xf, STAGE_TITLES[immediate & 0xf])
             else:
                 return "load id=0x%04X" % immediate
 
