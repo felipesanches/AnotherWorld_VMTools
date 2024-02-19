@@ -15,7 +15,7 @@ pip install -r requirements.txt
 
 The simplest way to use this to get bytecode disasm listing (assuming you have a copy of the game files for MSDOS saved on the `original/msdos/` directory) is to perform the following commands:
 
- > `./awvm-disasm.py original/msdos/ msdos`
+ > `./awvm-disasm.py original/msdos/ all_levels msdos`
 
 Below is a more detailed description of each individual script:
 

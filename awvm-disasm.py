@@ -449,17 +449,28 @@ class AWVM_Trace(ExecTrace):
             self.illegal_instruction(opcode)
             return "; DISASM ERROR! Illegal instruction (opcode = 0x%02X)" % opcode
 
+def save_list_of_graphical_assets(filename, entries):
+   open(filename, "w").write("\n".join(map(lambda e: f'0x{e:04x}', sorted(entries))))
 
 def makedir(path):
     if not os.path.exists(path):
         os.mkdir(path)
 
 
-if len(sys.argv) not in [2, 3]:
-    print(f"usage: {sys.argv[0]} <input_dir> [release-name]")
+if len(sys.argv) not in [3, 4]:
+    print(f"usage: {sys.argv[0]} <input_dir> level [release-name]\n"
+           "       you can use 'all_levels' if you want to disasm all game levels.\n")
 else:
+    release_name = ""
+    input_dir = sys.argv[1]
+    level = sys.argv[2]
     if len(sys.argv) == 3:
-        release_name = sys.argv[2]
+        disasm_dir = f"{input_dir}/output"
+        LABELED_CINEMATIC_ENTRIES = {}
+        KNOWN_LABELS = {}
+        POSSIBLY_UNUSED_CODEBLOCKS = {}
+    else: # len(sys.argv) == 4
+        release_name = sys.argv[3]
         try:
             data = __import__(name=f"releases.{release_name}",
                               fromlist=["MD5_CHECKSUMS",
@@ -481,14 +492,8 @@ else:
         output_dir = f"{os.getcwd()}/output"
         disasm_dir = f"{output_dir}/{release_name}/disasm"
         romset_dir = f"{output_dir}/{release_name}/romset"
-        data.generate_romset(input_dir=sys.argv[1],
+        data.generate_romset(input_dir=input_dir,
                              output_dir=output_dir)
-    else:
-        romset_dir = sys.argv[1]
-        disasm_dir = f"{romset_dir}/output"
-        LABELED_CINEMATIC_ENTRIES = {}
-        KNOWN_LABELS = {}
-        POSSIBLY_UNUSED_CODEBLOCKS = {}
 
     gamerom = f"{romset_dir}/bytecode.rom"
     makedir(disasm_dir)
@@ -498,7 +503,12 @@ else:
 
     num_levels = int(os.path.getsize(gamerom) / 0x10000)
     print(f"Num. levels = {num_levels}")
-    for game_level in range(num_levels):
+    if level == "all_levels":
+        levels = range(num_levels)
+    else:
+        levels = [int(sys.argv[2])]
+
+    for game_level in levels:
         print(f"disassembling level {game_level}...")
         RELOCATION_BLOCKS = (
             # physical,           logical, length 
