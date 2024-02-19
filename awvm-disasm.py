@@ -6,8 +6,6 @@
 import os
 import sys
 from exectrace import ExecTrace
-from releases.common_data.decode_polygons import PolygonDecoder
-
 
 game_level = None
 cinematic_counter = 0
@@ -449,6 +447,8 @@ class AWVM_Trace(ExecTrace):
             self.illegal_instruction(opcode)
             return "; DISASM ERROR! Illegal instruction (opcode = 0x%02X)" % opcode
 
+def save_list_of_graphical_assets(filename, entries):
+   open(filename, "w").write("\n".join(map(lambda e: f'0x{e:04x}', sorted(entries))))
 
 def makedir(path):
     if not os.path.exists(path):
@@ -493,12 +493,10 @@ else:
     gamerom = f"{romset_dir}/bytecode.rom"
     makedir(disasm_dir)
 
-    pd = PolygonDecoder(romset_dir,
-                        disasm_dir)
-
     num_levels = int(os.path.getsize(gamerom) / 0x10000)
     print(f"Num. levels = {num_levels}")
     for game_level in range(num_levels):
+#    for game_level in [int(sys.argv[2])]:
         print(f"disassembling level {game_level}...")
         RELOCATION_BLOCKS = (
             # physical,           logical, length 
@@ -522,16 +520,12 @@ else:
         print(f"\t{len(cinematic_entries.keys())} cinematic entries.")
 
         # cinematic polygon data:
-        pd.used_pdata = []
-        pd.extract_polygon_data(game_level, cinematic_entries, cinematic=True)
-        #pd.print_unused_polygon_data()
+        save_list_of_graphical_assets(f"level_{game_level}_polygons.txt", cinematic_entries)
 
         cinematic_entries = {}
         cinematic_counter = 0
 
     # common polygon data:
     print (f"\t{len(video2_entries.keys())} video2 entries.")
-    pd.used_pdata = []
-    pd.extract_polygon_data(game_level, video2_entries, cinematic=False)
-    #pd.print_unused_polygon_data()
+    save_list_of_graphical_assets("video_2_polygons.txt", video2_entries)
 

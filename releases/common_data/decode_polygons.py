@@ -211,8 +211,7 @@ class PolygonDecoder():
 
         makedir(dirpath)
 
-        for addr in entries.keys():
-            entry = entries[addr]
+        for addr, entry in entries.items():
             s = SVGSurface(f"{dirpath}/{entry['label']}.svg", 320, 200)
             ctx = Context(s)
             zoom = entry["zoom"]
