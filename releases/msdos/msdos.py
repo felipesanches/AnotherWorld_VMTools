@@ -32,6 +32,7 @@ def generate_romset(input_dir, output_dir):
     from releases.common_data.banks2resources import Resources
     from releases.common_data.resources2romset import ROMSet
     import os
+    import sys
 
     memlist_filename = f"{input_dir}/memlist.bin"
     if not os.path.exists(memlist_filename):
