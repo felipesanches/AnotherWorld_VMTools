@@ -10,4 +10,7 @@ description = "Rust port of the Another World virtual machine toolchain."
 [lib]
 path = "src/lib.rs"
 
+[dependencies]
+exectrace = { path = "../exectrace" }
+
 [dev-dependencies]

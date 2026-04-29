@@ -6,9 +6,14 @@
 //! byte-identical output against the Python reference.
 //!
 //! Phase A landed: [`unpacker`], [`memlist`], [`bank`].
+//! Phase C landed: [`romset`], [`disasm`], plus the auto-generated
+//! [`releases`] data tables.
 
 #![deny(unsafe_code)]
 
 pub mod bank;
+pub mod disasm;
 pub mod memlist;
+pub mod releases;
+pub mod romset;
 pub mod unpacker;
