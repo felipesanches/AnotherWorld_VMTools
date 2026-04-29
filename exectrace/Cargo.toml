@@ -1,0 +1,11 @@
+[package]
+name = "exectrace"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Rust port of ExecTrace — CPU-agnostic mechanism for analysing binaries by mapping all possible code-paths."
+
+[lib]
+path = "src/lib.rs"

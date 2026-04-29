@@ -1,0 +1,13 @@
+[package]
+name = "awvm"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Rust port of the Another World virtual machine toolchain."
+
+[lib]
+path = "src/lib.rs"
+
+[dev-dependencies]

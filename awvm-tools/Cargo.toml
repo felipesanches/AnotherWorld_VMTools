@@ -1,0 +1,16 @@
+[package]
+name = "awvm-tools"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Command-line tools for the Another World VM toolchain (Rust port)."
+
+[[bin]]
+name = "banks2resources"
+path = "src/bin/banks2resources.rs"
+
+[dependencies]
+awvm = { path = "../awvm" }
+exectrace = { path = "../exectrace" }

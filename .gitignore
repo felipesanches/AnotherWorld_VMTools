@@ -7,3 +7,10 @@ output
 __pycache__
 cfg
 example/*.bin
+
+# Rust build artefacts
+/target/
+**/*.rs.bk
+
+# Validation outputs (regenerable by validation/run_phase_*.sh)
+/validation/_out/

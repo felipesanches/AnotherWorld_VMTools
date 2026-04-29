@@ -1,0 +1,18 @@
+[workspace]
+resolver = "2"
+members = [
+    "exectrace",
+    "awvm",
+    "awvm-tools",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["Felipe Corrêa da Silva Sanches <juca@members.fsf.org>"]
+license = "GPL-3.0-or-later"
+repository = "https://github.com/felipesanches/AnotherWorld_VMTools"
+
+[profile.release]
+lto = true
+codegen-units = 1
