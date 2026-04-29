@@ -11,6 +11,10 @@ description = "Command-line tools for the Another World VM toolchain (Rust port)
 name = "banks2resources"
 path = "src/bin/banks2resources.rs"
 
+[[bin]]
+name = "awvm-disasm"
+path = "src/bin/awvm-disasm.rs"
+
 [dependencies]
 awvm = { path = "../awvm" }
 exectrace = { path = "../exectrace" }

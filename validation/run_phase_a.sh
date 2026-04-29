@@ -37,9 +37,13 @@ rm -rf "$OUT_DIR"
 mkdir -p "$PY_OUT" "$RS_OUT"
 
 # --- Resolve Python ExecTrace ---------------------------------------------
+# Probe for the actual symbol we need, not just the namespace
+# package: the Rust workspace's `exectrace/` directory makes the
+# bare `import exectrace` succeed even when the Python package is
+# absent.
 EXECTRACE_PATH="${AWVM_PY_EXECTRACE:-}"
 if [[ -z "$EXECTRACE_PATH" ]]; then
-    if python3 -c "import exectrace" 2>/dev/null; then
+    if python3 -c "from exectrace import ExecTrace" 2>/dev/null; then
         EXECTRACE_PATH=""  # already importable from system
     else
         EXECTRACE_PATH="$OUT_DIR/exectrace_wheel"
