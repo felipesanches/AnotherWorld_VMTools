@@ -300,6 +300,26 @@ impl<'v> Disassembler for AwvmDisassembler<'v> {
     }
 
     fn disasm_instruction(&mut self, t: &mut Tracer, opcode: u8) -> String {
+        // Wrapper: the actual decoder lives in `do_disasm_instruction`.
+        // After it runs, we harvest the per-instruction byte buffer
+        // the tracer has been filling and append a `;@raw=...`
+        // annotation so the assembler can round-trip the original
+        // bytecode bit-for-bit, matching the Python reference.
+        let text = self.do_disasm_instruction(t, opcode);
+        let raw = match t.current_consumed_bytes() {
+            Some(bs) if !bs.is_empty() => bs
+                .iter()
+                .map(|b| format!("0x{:02X}", b))
+                .collect::<Vec<_>>()
+                .join(","),
+            _ => return text,
+        };
+        format!("{}\t;@raw={}", text, raw)
+    }
+}
+
+impl<'v> AwvmDisassembler<'v> {
+    fn do_disasm_instruction(&mut self, t: &mut Tracer, opcode: u8) -> String {
         if opcode & 0x80 != 0 {
             // VIDEO (opcode high bit set)
             let lo = t.fetch();

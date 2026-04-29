@@ -38,6 +38,13 @@ struct Operand {
 struct Instruction {
     name: String,
     operands: Vec<Operand>,
+    /// Bytes captured by the disassembler in the `;@raw=...` annotation.
+    /// When present, the encoder emits these bytes verbatim instead
+    /// of computing them from `name + operands`. This makes
+    /// disasm → asm round-trip exact even where the canonical
+    /// encoding loses information (unused opcode bits, the
+    /// setPalette waste byte, etc.).
+    raw: Option<Vec<u8>>,
 }
 
 /// Parse one operand token, like `[HERO_ACTION]`, `0x40`, `id=0x012c`.
@@ -95,6 +102,7 @@ fn parse_common(name: &str, line: &str) -> Instruction {
     Instruction {
         name: name.to_owned(),
         operands,
+        raw: None,
     }
 }
 
@@ -219,6 +227,16 @@ fn keyword_operands(instr: &Instruction) -> HashMap<String, &Operand> {
 }
 
 fn encode(asm: &mut Asm, instr: &Instruction) {
+    // Round-trip path: when the disassembler captured the original
+    // bytes (`;@raw=...`), emit them verbatim. Same semantics as the
+    // Python reference's encode() shortcut.
+    if let Some(raw) = &instr.raw {
+        for b in raw {
+            asm.write_byte(*b);
+        }
+        return;
+    }
+
     match instr.name.as_str() {
         "org" => { /* AW VM bytecode is always at 0x0000 */ }
 
@@ -531,8 +549,12 @@ fn parse_lines(input: &str) -> (HashMap<String, i64>, Vec<(Option<String>, Instr
     let mut output: Vec<(Option<String>, Instruction)> = Vec::new();
     let mut pending_label: Option<String> = None;
 
-    for raw in input.lines() {
-        let line = raw.split(';').next().unwrap_or("").trim().to_owned();
+    for src_line in input.lines() {
+        // Extract the round-trip @raw annotation BEFORE the comment-strip
+        // step swallows it. Format produced by awvm-disasm:
+        // `<instr>\t;@raw=0xAA,0xBB,0xCC,...`.
+        let raw_bytes = parse_raw_marker(src_line);
+        let line = src_line.split(';').next().unwrap_or("").trim().to_owned();
 
         if line.contains("EQU") {
             if let Some(idx) = line.find("EQU") {
@@ -563,7 +585,8 @@ fn parse_lines(input: &str) -> (HashMap<String, i64>, Vec<(Option<String>, Instr
 
         for name in INSTRUCTION_NAMES {
             if effective_line.trim().starts_with(name) {
-                let instr = parse_common(name, &effective_line);
+                let mut instr = parse_common(name, &effective_line);
+                instr.raw = raw_bytes.clone();
                 output.push((pending_label.take(), instr));
                 break;
             }
@@ -571,6 +594,32 @@ fn parse_lines(input: &str) -> (HashMap<String, i64>, Vec<(Option<String>, Instr
     }
 
     (symbols, output)
+}
+
+/// Parse a `;@raw=0xAA,0xBB,...` marker out of one line. Returns
+/// `None` if the marker is absent.
+fn parse_raw_marker(line: &str) -> Option<Vec<u8>> {
+    const MARKER: &str = ";@raw=";
+    let idx = line.find(MARKER)?;
+    let rest = &line[idx + MARKER.len()..];
+    let rest = match rest.find(';') {
+        Some(end) => &rest[..end],
+        None => rest,
+    };
+    let mut out = Vec::new();
+    for tok in rest.split(',') {
+        let tok = tok.trim();
+        if tok.is_empty() {
+            continue;
+        }
+        let parsed = if let Some(hex) = tok.strip_prefix("0x").or_else(|| tok.strip_prefix("0X")) {
+            u8::from_str_radix(hex, 16).ok()?
+        } else {
+            tok.parse::<u8>().ok()?
+        };
+        out.push(parsed);
+    }
+    Some(out)
 }
 
 /// Assemble `input.asm` to `output.bin`. Output bytes are written

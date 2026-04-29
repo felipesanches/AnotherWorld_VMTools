@@ -136,6 +136,17 @@ pub struct Tracer {
     /// inside `fetch`, we surface it via this field rather than
     /// Python-style exceptions.
     fetch_already_visited: bool,
+
+    /// Per-instruction byte buffer.  Populated by `fetch` while a
+    /// disassembly call is in flight; harvested by `run` after each
+    /// instruction.  Disassembler implementations may peek at it via
+    /// [`Tracer::current_consumed_bytes`] to emit round-trip
+    /// annotations.
+    current_consumed: Option<Vec<u8>>,
+
+    /// Final per-instruction byte map.  Filled in by `run` from
+    /// `current_consumed` after each instruction completes.
+    pub consumed_bytes: BTreeMap<u32, Vec<u8>>,
 }
 
 impl Tracer {
@@ -160,6 +171,8 @@ impl Tracer {
             labeled_addresses: BTreeSet::new(),
             log_level: LogLevel::Error,
             fetch_already_visited: false,
+            current_consumed: None,
+            consumed_bytes: BTreeMap::new(),
         }
     }
 
@@ -191,6 +204,8 @@ impl Tracer {
             labeled_addresses: BTreeSet::new(),
             log_level: LogLevel::Error,
             fetch_already_visited: false,
+            current_consumed: None,
+            consumed_bytes: BTreeMap::new(),
         })
     }
 
@@ -459,8 +474,18 @@ impl Tracer {
             LogLevel::Debug,
             format!("Fetch at {:#x}: {:#x}", pc, value),
         );
+        if let Some(buf) = self.current_consumed.as_mut() {
+            buf.push(value);
+        }
         self.pc = Some(pc + 1);
         value
+    }
+
+    /// Slice into the byte buffer being populated for the
+    /// currently-decoding instruction. Returns `None` outside of a
+    /// `disasm_instruction` call.
+    pub fn current_consumed_bytes(&self) -> Option<&[u8]> {
+        self.current_consumed.as_deref()
     }
 
     // ---------- Public crawl entry point ----------
@@ -477,8 +502,12 @@ impl Tracer {
 
         while let Some(pc) = self.pc {
             self.fetch_already_visited = false;
+            // Start capturing this instruction's bytes. fetch() will
+            // append; we harvest after disasm_instruction returns.
+            self.current_consumed = Some(Vec::new());
             let opcode = self.fetch();
             if self.fetch_already_visited {
+                self.current_consumed = None;
                 self.log(LogLevel::Verbose, format!("ALREADY BEEN AT {:#x}!", pc));
                 if pc > self.current_entry_point {
                     let cur = self.current_entry_point;
@@ -491,6 +520,9 @@ impl Tracer {
             let text = dis.disasm_instruction(self, opcode);
             self.log(LogLevel::Debug, format!("{:#x}: {}", pc, text));
             self.disasm.insert(pc, text);
+            if let Some(bytes) = self.current_consumed.take() {
+                self.consumed_bytes.insert(pc, bytes);
+            }
         }
     }
 
