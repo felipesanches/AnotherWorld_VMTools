@@ -15,6 +15,10 @@ path = "src/bin/banks2resources.rs"
 name = "awvm-disasm"
 path = "src/bin/awvm-disasm.rs"
 
+[[bin]]
+name = "awvm-asm"
+path = "src/bin/awvm-asm.rs"
+
 [dependencies]
 awvm = { path = "../awvm" }
 exectrace = { path = "../exectrace" }
