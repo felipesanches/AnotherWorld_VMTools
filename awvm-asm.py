@@ -76,6 +76,17 @@ def word(v, negative=False):
             print (f"Symbol '{v}' could not be found.")
 
 def encode(instr):
+    # Round-trip support: if the disassembler captured the raw byte
+    # sequence in a `;@raw=...` annotation, just emit those bytes
+    # verbatim. They are the *exact* bytes from the original bytecode,
+    # so the assembler will reproduce the input byte-for-byte even
+    # when the canonical encoding would have lost information (unused
+    # opcode bits, the setPalette waste byte, etc.).
+    if "raw" in instr:
+        for b in instr["raw"]:
+            byte(b)
+        return
+
     if instr["name"] == "org":
         pass  #  for now we ignore this, as it is always 0x0000 for AW VM
               #  (at least for the original game bytecode)
@@ -365,6 +376,26 @@ def assemble(input_filename):
     rom = open(output_filename, "w+b")
     lines = open(input_filename).readlines()
     for line in lines:
+        # Extract the round-trip @raw annotation (if any) BEFORE the
+        # comment-strip step swallows it. Format produced by
+        # awvm-disasm.py: `<instr>\t;@raw=0xAA,0xBB,0xCC,...`.
+        raw_bytes = None
+        raw_marker = ";@raw="
+        if raw_marker in line:
+            idx = line.index(raw_marker)
+            raw_part = line[idx + len(raw_marker):]
+            if ";" in raw_part:
+                raw_part = raw_part[:raw_part.index(";")]
+            raw_bytes = []
+            for tok in raw_part.split(","):
+                tok = tok.strip()
+                if not tok:
+                    continue
+                if tok.startswith("0x") or tok.startswith("0X"):
+                    raw_bytes.append(int(tok, 16))
+                else:
+                    raw_bytes.append(int(tok))
+
         line = line.split(";")[0].strip() #remove comments
         if "EQU" in line:
             tokens = line.split("EQU")
@@ -386,6 +417,8 @@ def assemble(input_filename):
                                  "shl", "shr", "play", "song", "GameOver"]:
             if line.strip().startswith(instruction_name):
                 instr = parse_common(instruction_name, line)
+                if raw_bytes is not None:
+                    instr["raw"] = raw_bytes
                 instructions.append((label, instr))
                 label = None
                 break

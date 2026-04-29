@@ -150,6 +150,18 @@ def getVariableName(value):
 
 
 class AWVM_Trace(ExecTrace):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Per-instruction byte capture for the round-trip annotation. fetch()
+        # appends to this list while disasm_instruction() is in flight.
+        self._curr_consumed = None
+
+    def fetch(self):
+        b = super().fetch()
+        if self._curr_consumed is not None:
+            self._curr_consumed.append(b)
+        return b
+
     def getLabelName(self, addr):
         self.register_label(addr)
         if addr in KNOWN_LABELS.get(self.game_level, []):
@@ -176,6 +188,21 @@ class AWVM_Trace(ExecTrace):
 
 
     def disasm_instruction(self, opcode):
+        # Wrapper: capture every byte the per-opcode decoder consumes
+        # so we can emit a `;@raw=...` annotation that lets the asm
+        # round-trip the original bytecode bit-for-bit, even where the
+        # text form discards information (e.g. the unused bits in
+        # 0x40-family video opcodes, the "waste byte" of setPalette).
+        self._curr_consumed = [opcode]
+        try:
+            text = self._do_disasm_instruction(opcode)
+        finally:
+            consumed = self._curr_consumed
+            self._curr_consumed = None
+        raw_str = ",".join("0x%02X" % b for b in consumed)
+        return "%s\t;@raw=%s" % (text, raw_str)
+
+    def _do_disasm_instruction(self, opcode):
         if (opcode & 0x80) == 0x80:  # VIDEO
             offset = (((opcode & 0x7F) << 8) | self.fetch()) * 2
             x = self.fetch()
