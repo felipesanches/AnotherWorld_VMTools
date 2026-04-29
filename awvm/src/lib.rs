@@ -14,6 +14,7 @@
 pub mod bank;
 pub mod disasm;
 pub mod memlist;
+pub mod polygons;
 pub mod releases;
 pub mod romset;
 pub mod unpacker;

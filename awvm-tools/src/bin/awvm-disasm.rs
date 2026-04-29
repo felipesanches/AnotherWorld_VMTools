@@ -12,7 +12,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
-use awvm::{bank, disasm, disasm::Video2Accumulator, memlist, releases::msdos, romset};
+use awvm::{bank, disasm, disasm::Video2Accumulator, memlist, polygons, releases::msdos, romset};
 
 fn usage() -> ExitCode {
     eprintln!(
@@ -140,8 +140,40 @@ fn main() -> ExitCode {
             }
         };
         println!("\t{} cinematic entries.", dis.cinematic_entries.len());
+
+        // Cinematic polygons → SVG (Phase D).
+        match polygons::PolygonDecoder::for_cinematic(&romset_dir, level) {
+            Ok(mut pd) => {
+                let cin_dir = level_dir.join("cinematic");
+                let entries: Vec<_> = dis
+                    .cinematic_entries
+                    .iter()
+                    .map(|(a, e)| (*a, e.clone()))
+                    .collect();
+                if let Err(e) = pd.extract(entries, &cin_dir) {
+                    eprintln!("level {level}: cinematic SVG extract: {e}");
+                }
+            }
+            Err(e) => eprintln!("level {level}: cinematic decoder init: {e}"),
+        }
     }
     println!("\t{} video2 entries.", video2.entries.len());
+
+    // Common video (video2) polygons → SVG.
+    match polygons::PolygonDecoder::for_video2(&romset_dir) {
+        Ok(mut pd) => {
+            let cv_dir = disasm_dir.join("common_video");
+            let entries: Vec<_> = video2
+                .entries
+                .iter()
+                .map(|(a, e)| (*a, e.clone()))
+                .collect();
+            if let Err(e) = pd.extract(entries, &cv_dir) {
+                eprintln!("common_video SVG extract: {e}");
+            }
+        }
+        Err(e) => eprintln!("video2 decoder init: {e}"),
+    }
 
     ExitCode::SUCCESS
 }
