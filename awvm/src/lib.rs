@@ -11,6 +11,7 @@
 
 #![deny(unsafe_code)]
 
+pub mod adf;
 pub mod asm;
 pub mod bank;
 pub mod disasm;
