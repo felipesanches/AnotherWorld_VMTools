@@ -1,32 +1,34 @@
-# Validation harnesses for the Rust port
+# Validation
 
-Each `run_phase_*.sh` runs both the Python reference implementation
-and the corresponding Rust port over the same input, and asserts the
-outputs match. These scripts are the gates each port phase must pass
-before merging to `main`.
+The repo's standing correctness check.
 
-| Phase | Script | What it asserts |
-|---|---|---|
-| A | `run_phase_a.sh <input_dir>` | `banks2resources` Python and Rust ports produce byte-identical resource binaries (146 files for MSDOS) and identical stdout. |
-| B | (TODO) | ExecTrace mechanics — covered indirectly via the disassembler in C. |
-| C | (TODO) | `awvm-disasm` text output is byte-identical for every BYTECODE resource. |
-| D | (TODO) | Polygon decoder produces semantically-equivalent SVG (per the user's stated bar). |
-| E | (TODO) | Round-trip `awvm-disasm → awvm-asm → bytes` is byte-identical to the input bytecode for every level. |
+## `round_trip.sh <input_dir>`
 
-## Phase A in 30 seconds
+For every MSDOS level reachable from `<input_dir>/memlist.bin` +
+`bank<NN>`, assert that the Rust pipeline `awvm-disasm` →
+`awvm-asm` reproduces the original bytecode byte-for-byte.
 
 ```bash
-# input_dir must contain memlist.bin + bank01..bank0d (the MSDOS layout).
-validation/run_phase_a.sh /path/to/aworld_unpacked/aworld/aworld
+validation/round_trip.sh /path/to/aworld/aworld
 ```
 
-The script:
-- Builds the Rust workspace in `--release`.
-- Resolves the Python `exectrace` package (downloads the pypi wheel into
-  `validation/_out/exectrace_wheel/` if the system Python doesn't have it).
-- Runs `releases/common_data/banks2resources.py` against the input.
-- Runs `target/release/banks2resources` against the same input.
-- `diff`s their `stdout` and their `resources/` outputs.
-- Exits 0 on match, 1 on any divergence.
+Outputs land under `validation/_out/` (gitignored).
 
-Outputs land under `validation/_out/`, which is gitignored.
+## Historical Python-parity harnesses
+
+The git history retains a family of Python-vs-Rust parity scripts
+that guarded byte-identity at multiple stages during the port:
+
+- `run_phase_a.sh` — banks2resources stdout + per-resource .bin parity
+- `run_phase_c.sh` — per-level disassembly .asm parity
+- `run_phase_d.sh` — polygon SVG semantic equivalence
+- `run_phase_e.sh` — Rust↔Python `.asm → .bin` parity
+- `run_round_trip.sh` — four-way disasm/asm round-trip + cross-parity
+- `run_perf_comparison.py` — Python vs Rust wall-clock comparison
+
+These were retired together with the Python implementation in
+2026; recover from git history if needed for archaeology of the
+port itself. The Rust port was byte-identical to the Python
+reference for the `msdos`, `amiga`, and `genesis_europe`
+releases (the three with locally-archived fixtures); see the
+`docs/perf_report.md` companion document for the speed data.

@@ -1,39 +1,109 @@
 # Another World VM Tools
 
-- Toolchain for software development targeting the virtual machine originally designed for Eric Chahi's Another World game.
-- The scripts in this repo are Licensed under the GPL version 3 or later
-- All scripts require Python 3.
-- There's a MAME fork with an implementation of the Another World VM available at https://github.com/felipesanches/mame/tree/anotherworld which can be used to run any "romset" compiled with the assembler provided by this toolchain. (**Note:** Do not forget to also copy the text-string and font ROMs from the `hardcoded_data` directory to your MAME rompath when running the driver - See also: issue #15)
+Toolchain for software development targeting the virtual machine
+originally designed for Eric Chahi's Another World (1991).
 
-## Install
+This toolchain is now a **pure-Rust workspace**. The original
+Python implementation it grew out of (`awvm-disasm.py`,
+`awvm-asm.py`, `releases/<release>/*.py`, `releases/common_data/*.py`)
+was retired in 2026 once the Rust port reached byte-identical
+parity with it on every release we had a fixture for. The git
+history retains the Python source verbatim — `git log` and
+`git show <sha>:awvm-disasm.py` recover it.
 
-You need to first install dependencies by doing:
+Licensed under GPL-3.0-or-later.
 
-pip install -r requirements.txt
+## Workspace layout
 
-## Scripts Descriptions and Use
+```
+exectrace/      # CPU-agnostic instruction-trace framework
+                # (Rust port of github.com/felipesanches/ExecTrace)
+awvm/           # Another World VM library: unpacker, memlist parser,
+                # bank reader, disassembler, polygon decoder,
+                # assembler, OFS-format ADF reader, plus per-release
+                # data tables (KNOWN_LABELS, STAGE_TITLES, etc.)
+awvm-tools/     # CLI binaries:
+                #   awvm-disasm     — full-pipeline disassembly
+                #                     (banks2resources → resources2romset
+                #                      → trace + emit per-level .asm
+                #                      → polygon-SVG extraction)
+                #   awvm-asm        — assemble a .asm back into bytecode;
+                #                     round-trips byte-identical
+                #   adf-extract     — unpack files from OFS-formatted
+                #                     Amiga Disk File images
+                #   banks2resources — pre-pipeline standalone resource
+                #                     extractor (used by awvm-disasm)
+hardcoded_data/ # Text/font ROMs the disassembler/assembler need for
+                # the `text` opcode. Used by every release that
+                # doesn't extract its own strings from the cartridge.
+example/        # Sample assembly programs (bounce.asm, pong.asm)
+validation/     # Round-trip integrity check (Rust-only)
+```
 
-The simplest way to use this to get bytecode disasm listing (assuming you have a copy of the game files for MSDOS saved on the `original/msdos/` directory) is to perform the following commands:
+## Build
 
- > `./awvm-disasm.py original/msdos/ all_levels msdos`
+```bash
+cargo build --release
+```
 
-Below is a more detailed description of each individual script:
+The release build uses LTO and one codegen unit (~5 s on a modern
+laptop). Resulting binaries live in `target/release/`.
 
-### awvm-disasm.py
-- Disassembles ROM files and generates an assembly source code tree.
-- Includes data files extracted from the resource files such as SVG images.
+## Disassemble a release
 
-### awvm-asm.py
-- Assembles a source tree into bytecode binaries (with embedded data).
-- We expect perfect round-tripping of a source tree, meaning that `awvm-asm.py` should generate binary outputs absolutely identical to the inputs of `awvm-disasm.py`.
+For a release packaged as `memlist.bin` + `bank<NN>` files (msdos,
+amiga), or extracted from a cartridge ROM (snes, genesis_europe,
+gba_usa, symbian_demo):
 
-### build_and_run.sh
-- Helper shell script that builds an assembly source tree, copies the generated ROM files to the MAME rompath and executes the emulator.
-- This script needs to be tweaked to use the directory paths of your project files, MAME executable, etc...
+```bash
+./target/release/awvm-disasm <input_dir> all_levels <release_slug>
+```
 
-## Development
+Where `<release_slug>` is one of: `msdos`, `amiga`, `snes`,
+`genesis_europe`, `gba_usa`, `symbian_demo`. Run with
+`--no-polygons` to skip polygon-SVG extraction (useful for fast
+iteration or when comparing against a reference that doesn't
+generate them).
 
-### Create and activate your virtual environment
-- virtualenv venv -p python3
-- source venv/bin/activate
-- pip install -r requirements.txt
+For Amiga ADF input, unpack first:
+
+```bash
+./target/release/adf-extract DiskA.adf DiskB.adf <unpacked_dir>
+./target/release/awvm-disasm <unpacked_dir> all_levels amiga
+```
+
+## Reassemble a level
+
+```bash
+./target/release/awvm-asm <input.asm>
+```
+
+Writes `<input>.bin` next to the input. Round-trip with the
+disassembler is byte-identical thanks to `;@raw=...` annotations
+emitted by `awvm-disasm` (each instruction's annotation captures
+the exact byte sequence the disassembler consumed, so the
+assembler reproduces those bytes verbatim — even when the
+canonical encoding would have been lossy in pre-existing opcodes
+like the 0x40-family video instructions or the `setPalette`
+waste byte).
+
+## Round-trip integrity check
+
+```bash
+validation/round_trip.sh <msdos_input_dir>
+```
+
+Asserts that every MSDOS level disasm-then-asm reproduces the
+original bytecode byte-for-byte. The Python-vs-Rust parity
+harnesses (`run_phase_*.sh`, `run_perf_comparison.py`) that
+guarded this property during the port were retired alongside
+the Python implementation.
+
+## Running compiled "romsets"
+
+The
+[`anotherworld` MAME fork](https://github.com/felipesanches/mame/tree/anotherworld)
+implements the Another World VM and can run any romset
+`awvm-asm` produces. Copy the text-string and font ROMs from
+`hardcoded_data/` into your MAME rompath alongside the assembled
+output (see issue #15).
