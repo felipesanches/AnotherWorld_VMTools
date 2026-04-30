@@ -22,3 +22,7 @@ path = "src/bin/awvm-asm.rs"
 [dependencies]
 awvm = { path = "../awvm" }
 exectrace = { path = "../exectrace" }
+
+# symbian_demo's romset prep needs zlib (outer) + LZMA1 (inner) decompression.
+flate2 = "1.0"
+lzma-rs = "0.3"

@@ -154,12 +154,9 @@ fn main() -> ExitCode {
                 string_extraction: None,
             },
         ),
+        "symbian_demo" => prepare_symbian_romset(&input_dir, &release_out, &hardcoded),
         other => {
-            eprintln!(
-                "release {:?}: prepare_romset not implemented yet \
-                 (symbian_demo needs zlib + lzma decompression and is pending)",
-                other
-            );
+            eprintln!("release {:?}: prepare_romset not implemented", other);
             return ExitCode::from(2);
         }
     };
@@ -395,6 +392,112 @@ fn prepare_cartridge_romset(
         }
     }
     Ok(())
+}
+
+/// Port of `symbian2romset.py:SymbianDemoROMSet`.
+///
+/// Reads `<input_dir>/locked_anotherworld.sis`, slices the zlib
+/// payload at `[0xBBA, 0xBBA + 749540)`, decompresses it (outer
+/// layer), then for each `(start, end)` chunk runs LZMA1 decompress
+/// over `raw[start..end]` and pads the result to 0x10000 with `0xFF`
+/// (matching the Python reference). Produces:
+///   - `<release_out>/romset/bytecode.rom`     (8 levels' bytecode)
+///   - `<release_out>/romset/cinematic.rom`    (1 cinematic slab)
+///   - the hardcoded text/font ROMs from `hardcoded_data/`
+///
+/// Note: the Python reference does NOT extract symbian-specific
+/// text strings; it relies on the disassembler to fall back to
+/// whatever str_data.rom is present. We mirror that by copying the
+/// hardcoded MSDOS string ROMs.
+fn prepare_symbian_romset(
+    input_dir: &Path,
+    release_out: &Path,
+    hardcoded: &Path,
+) -> std::io::Result<()> {
+    use std::io::Read;
+
+    let romset_dir = release_out.join("romset");
+    fs::create_dir_all(&romset_dir)?;
+
+    let sis = fs::read(input_dir.join("locked_anotherworld.sis"))?;
+
+    const ZLIB_OFFSET: usize = 0xBBA;
+    const ZLIB_LENGTH: usize = 749540;
+    if ZLIB_OFFSET + ZLIB_LENGTH > sis.len() {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            format!(
+                "locked_anotherworld.sis: cannot slice zlib payload \
+                 [0x{:x}..0x{:x}) from a {}-byte file",
+                ZLIB_OFFSET,
+                ZLIB_OFFSET + ZLIB_LENGTH,
+                sis.len()
+            ),
+        ));
+    }
+    let packed = &sis[ZLIB_OFFSET..ZLIB_OFFSET + ZLIB_LENGTH];
+
+    let mut zlib_decoder = flate2::read::ZlibDecoder::new(packed);
+    let mut raw = Vec::new();
+    zlib_decoder.read_to_end(&mut raw)?;
+
+    // Bytecode: 8 levels (note: per the Python comment, this release
+    // does not have a level-0 bytecode — level numbers start at 1).
+    let bytecode_chunks: &[(usize, usize)] = &[
+        (0x49D8C, 0x4B38F), // level 1
+        (0x55F55, 0x587A6), // level 2
+        (0x60A5B, 0x6551D), // level 3
+        (0x6CA75, 0x73E92), // level 4
+        (0x7D4DC, 0x7E65A), // level 5
+        (0x81B7E, 0x87A59), // level 6
+        (0x8FDA0, 0x903E8), // level 7
+        (0xC335B, 0xC39CE), // level 8
+    ];
+    let bytecode = decompress_lzma_chunks(&raw, bytecode_chunks)?;
+    fs::write(romset_dir.join("bytecode.rom"), &bytecode)?;
+
+    let cinematic_chunks: &[(usize, usize)] = &[(0x6551E, 0x6C675)];
+    let cinematic = decompress_lzma_chunks(&raw, cinematic_chunks)?;
+    fs::write(romset_dir.join("cinematic.rom"), &cinematic)?;
+
+    for filename in ["str_data.rom", "str_index.rom", "anotherworld_chargen.rom"] {
+        fs::copy(hardcoded.join(filename), romset_dir.join(filename))?;
+    }
+    Ok(())
+}
+
+/// Run LZMA1 ("alone" format, the default Python `lzma.LZMADecompressor()`
+/// auto-detects on these byte streams) over each `[start, end)` slice
+/// of `raw` and pad the result to 0x10000 with `0xFF`. Concatenates
+/// all slabs into a single returned buffer.
+fn decompress_lzma_chunks(raw: &[u8], chunks: &[(usize, usize)]) -> std::io::Result<Vec<u8>> {
+    let mut out = Vec::with_capacity(chunks.len() * 0x10000);
+    for (start, end) in chunks {
+        if *end > raw.len() || *start >= *end {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                format!(
+                    "lzma chunk [0x{:x}, 0x{:x}) out of range for {}-byte payload",
+                    start,
+                    end,
+                    raw.len()
+                ),
+            ));
+        }
+        let mut cursor = std::io::Cursor::new(&raw[*start..*end]);
+        let mut decompressed = Vec::new();
+        lzma_rs::lzma_decompress(&mut cursor, &mut decompressed).map_err(|e| {
+            std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                format!("lzma_decompress at [0x{:x}, 0x{:x}): {e}", start, end),
+            )
+        })?;
+        out.extend_from_slice(&decompressed);
+        for _ in decompressed.len()..0x10000 {
+            out.push(0xFF);
+        }
+    }
+    Ok(out)
 }
 
 /// Port of `genesis2romset.py:generate_text_string_roms`. Walks the
