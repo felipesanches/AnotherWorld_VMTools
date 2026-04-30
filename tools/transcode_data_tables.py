@@ -111,6 +111,36 @@ RELEASES = [
 ]
 
 
+def emit_release_data_const(rel_name, has_resource_ids):
+    """Bundle the per-release tables into a ReleaseData struct that the
+    Rust disassembler reads at runtime."""
+    lines = [
+        "/// Bundled per-release tables. Used by the disassembler and",
+        "/// release dispatch in the CLI.",
+        "pub const RELEASE_DATA: crate::releases::ReleaseData = crate::releases::ReleaseData {",
+        f"    slug: {rust_str(rel_name)},",
+        "    stage_titles: STAGE_TITLES,",
+        "    known_labels: KNOWN_LABELS,",
+        "    possibly_unused_codeblocks: POSSIBLY_UNUSED_CODEBLOCKS,",
+        "    labeled_cinematic_entries: LABELED_CINEMATIC_ENTRIES_OVERRIDE,",
+    ]
+    if has_resource_ids:
+        lines.append(
+            "    resource_ids: crate::romset::ResourceIds {"
+        )
+        lines.append("        bytecode: resource_ids::BYTECODE,")
+        lines.append("        cinematic: resource_ids::CINEMATIC,")
+        lines.append("        palette: resource_ids::PALETTE,")
+        lines.append("        video2: resource_ids::VIDEO2,")
+        lines.append("    },")
+    else:
+        lines.append(
+            "    resource_ids: crate::romset::ResourceIds { bytecode: &[], cinematic: &[], palette: &[], video2: &[] },"
+        )
+    lines.append("};")
+    return "\n".join(lines)
+
+
 def emit_release(rel_name, mod_path, src_path, has_resource_ids):
     mod = importlib.import_module(mod_path)
     sections = [header(src_path)]
@@ -118,14 +148,20 @@ def emit_release(rel_name, mod_path, src_path, has_resource_ids):
         sections.append(emit_md5("MD5_CHECKSUMS", mod.MD5_CHECKSUMS))
     if hasattr(mod, "STAGE_TITLES"):
         sections.append(emit_string_array("STAGE_TITLES", mod.STAGE_TITLES))
+    else:
+        sections.append("pub const STAGE_TITLES: &[&str] = &[];")
     if hasattr(mod, "KNOWN_LABELS"):
         sections.append(emit_known_labels("KNOWN_LABELS", mod.KNOWN_LABELS))
+    else:
+        sections.append("pub const KNOWN_LABELS: &[(u32, &[(u32, &str)])] = &[];")
     if hasattr(mod, "POSSIBLY_UNUSED_CODEBLOCKS"):
         sections.append(
             emit_unused_codeblocks(
                 "POSSIBLY_UNUSED_CODEBLOCKS", mod.POSSIBLY_UNUSED_CODEBLOCKS
             )
         )
+    else:
+        sections.append("pub const POSSIBLY_UNUSED_CODEBLOCKS: &[(u32, &[u32])] = &[];")
     if hasattr(mod, "LABELED_CINEMATIC_ENTRIES"):
         # Some releases re-use common_data entries via .get(...) calls. Materialise
         # whatever the resolved dict looks like at import time.
@@ -139,8 +175,11 @@ def emit_release(rel_name, mod_path, src_path, has_resource_ids):
                 },
             )
         )
+    else:
+        sections.append("pub const LABELED_CINEMATIC_ENTRIES_OVERRIDE: &[(u32, &[(u32, &str)])] = &[];")
     if has_resource_ids and hasattr(mod, "resource_ids"):
         sections.append(emit_resource_ids("resource_ids", mod.resource_ids))
+    sections.append(emit_release_data_const(rel_name, has_resource_ids and hasattr(mod, "resource_ids")))
     out = OUT_DIR / f"{rel_name}.rs"
     out.write_text("\n\n".join(sections) + "\n", encoding="utf-8")
     print(f"wrote {out.relative_to(REPO)}")
@@ -169,6 +208,26 @@ def main():
     ]
     for rel_name, *_ in RELEASES:
         mod_lines.append(f"pub mod {rel_name};")
+    mod_lines.append("")
+    mod_lines.append("/// Release-agnostic bundle of per-release data tables.")
+    mod_lines.append("/// One `RELEASE_DATA` const exists in each release module.")
+    mod_lines.append("pub struct ReleaseData {")
+    mod_lines.append("    pub slug: &'static str,")
+    mod_lines.append("    pub stage_titles: &'static [&'static str],")
+    mod_lines.append("    pub known_labels: &'static [(u32, &'static [(u32, &'static str)])],")
+    mod_lines.append("    pub possibly_unused_codeblocks: &'static [(u32, &'static [u32])],")
+    mod_lines.append("    pub labeled_cinematic_entries: &'static [(u32, &'static [(u32, &'static str)])],")
+    mod_lines.append("    pub resource_ids: crate::romset::ResourceIds<'static>,")
+    mod_lines.append("}")
+    mod_lines.append("")
+    mod_lines.append("/// Look up a release by slug at run-time.")
+    mod_lines.append("pub fn by_slug(slug: &str) -> Option<&'static ReleaseData> {")
+    mod_lines.append("    match slug {")
+    for rel_name, *_ in RELEASES:
+        mod_lines.append(f"        \"{rel_name}\" => Some(&{rel_name}::RELEASE_DATA),")
+    mod_lines.append("        _ => None,")
+    mod_lines.append("    }")
+    mod_lines.append("}")
     (OUT_DIR / "mod.rs").write_text("\n".join(mod_lines) + "\n", encoding="utf-8")
     print(f"wrote {(OUT_DIR / 'mod.rs').relative_to(REPO)}")
 

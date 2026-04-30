@@ -11,7 +11,7 @@ use std::path::Path;
 
 use exectrace::{Disassembler, RelocationBlock, Tracer};
 
-use crate::releases::{common_data, msdos};
+use crate::releases::ReleaseData;
 
 const VIDEO2: u32 = 0;
 const CINEMATIC: u32 = 1;
@@ -121,6 +121,10 @@ pub struct AwvmDisassembler<'v> {
     str_data: Vec<u8>,
     /// String index table (`str_index.rom`) — pairs of LE bytes per string id.
     str_index: Vec<u8>,
+    /// Per-release data tables (KNOWN_LABELS, POSSIBLY_UNUSED_CODEBLOCKS,
+    /// LABELED_CINEMATIC_ENTRIES, STAGE_TITLES). Plumbed through so the
+    /// disassembler is release-agnostic.
+    pub release: &'static ReleaseData,
 }
 
 impl<'v> AwvmDisassembler<'v> {
@@ -129,6 +133,7 @@ impl<'v> AwvmDisassembler<'v> {
         str_data: Vec<u8>,
         str_index: Vec<u8>,
         video2: &'v mut Video2Accumulator,
+        release: &'static ReleaseData,
     ) -> Self {
         Self {
             game_level,
@@ -138,11 +143,12 @@ impl<'v> AwvmDisassembler<'v> {
             video2,
             str_data,
             str_index,
+            release,
         }
     }
 
     fn known_label(&self, addr: u32) -> Option<&'static str> {
-        for (lvl, labels) in msdos::KNOWN_LABELS {
+        for (lvl, labels) in self.release.known_labels {
             if *lvl == self.game_level {
                 for (a, name) in *labels {
                     if *a == addr {
@@ -155,7 +161,7 @@ impl<'v> AwvmDisassembler<'v> {
     }
 
     fn is_unused_codeblock(&self, addr: u32) -> bool {
-        for (lvl, addrs) in msdos::POSSIBLY_UNUSED_CODEBLOCKS {
+        for (lvl, addrs) in self.release.possibly_unused_codeblocks {
             if *lvl == self.game_level {
                 for a in *addrs {
                     if *a == addr {
@@ -168,7 +174,7 @@ impl<'v> AwvmDisassembler<'v> {
     }
 
     fn labeled_cinematic(&self, addr: u32) -> Option<&'static str> {
-        for (lvl, labels) in common_data::LABELED_CINEMATIC_ENTRIES {
+        for (lvl, labels) in self.release.labeled_cinematic_entries {
             if *lvl == self.game_level {
                 for (a, name) in *labels {
                     if *a == addr {
@@ -636,7 +642,7 @@ impl<'v> AwvmDisassembler<'v> {
                 let lo = t.fetch();
                 let imm = (u32::from(hi) << 8) | u32::from(lo);
                 let nibble = (imm & 0xf) as usize;
-                if imm > 0x100 && nibble < msdos::STAGE_TITLES.len() {
+                if imm > 0x100 && nibble < self.release.stage_titles.len() {
                     if imm & 0xfff0 != 0x3E80 {
                         // Print the warning to stderr to match the Python's stdout
                         // print(); we route this via eprintln! to keep parity with
@@ -652,7 +658,7 @@ impl<'v> AwvmDisassembler<'v> {
                     format!(
                         "bankSwitch {};  {}",
                         imm & 0xf,
-                        msdos::STAGE_TITLES[nibble]
+                        self.release.stage_titles[nibble]
                     )
                 } else {
                     format!("load id=0x{:04X}", imm)
@@ -696,6 +702,7 @@ pub fn disassemble_level<'v>(
     str_index_path: &Path,
     out_asm_path: &Path,
     video2: &'v mut Video2Accumulator,
+    release: &'static ReleaseData,
 ) -> io::Result<AwvmDisassembler<'v>> {
     let str_data = fs::read(str_data_path)?;
     let str_index = fs::read(str_index_path)?;
@@ -710,7 +717,7 @@ pub fn disassemble_level<'v>(
 
     // POSSIBLY_UNUSED_CODEBLOCKS: schedule each as a subroutine entry
     // point — matches the Python's `subroutines=POSSIBLY_UNUSED_CODEBLOCKS.get(...)`.
-    for (lvl, addrs) in msdos::POSSIBLY_UNUSED_CODEBLOCKS {
+    for (lvl, addrs) in release.possibly_unused_codeblocks {
         if *lvl == game_level {
             for a in *addrs {
                 tracer.schedule_entry_point(*a, true);
@@ -718,7 +725,7 @@ pub fn disassemble_level<'v>(
         }
     }
 
-    let mut dis = AwvmDisassembler::new(game_level, str_data, str_index, video2);
+    let mut dis = AwvmDisassembler::new(game_level, str_data, str_index, video2, release);
     tracer.run(&mut dis, &[0x0000]);
 
     if let Some(parent) = out_asm_path.parent() {

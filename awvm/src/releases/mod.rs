@@ -7,3 +7,27 @@ pub mod genesis_europe;
 pub mod msdos;
 pub mod snes;
 pub mod symbian_demo;
+
+/// Release-agnostic bundle of per-release data tables.
+/// One `RELEASE_DATA` const exists in each release module.
+pub struct ReleaseData {
+    pub slug: &'static str,
+    pub stage_titles: &'static [&'static str],
+    pub known_labels: &'static [(u32, &'static [(u32, &'static str)])],
+    pub possibly_unused_codeblocks: &'static [(u32, &'static [u32])],
+    pub labeled_cinematic_entries: &'static [(u32, &'static [(u32, &'static str)])],
+    pub resource_ids: crate::romset::ResourceIds<'static>,
+}
+
+/// Look up a release by slug at run-time.
+pub fn by_slug(slug: &str) -> Option<&'static ReleaseData> {
+    match slug {
+        "amiga" => Some(&amiga::RELEASE_DATA),
+        "gba_usa" => Some(&gba_usa::RELEASE_DATA),
+        "genesis_europe" => Some(&genesis_europe::RELEASE_DATA),
+        "msdos" => Some(&msdos::RELEASE_DATA),
+        "snes" => Some(&snes::RELEASE_DATA),
+        "symbian_demo" => Some(&symbian_demo::RELEASE_DATA),
+        _ => None,
+    }
+}

@@ -528,3 +528,19 @@ pub mod resource_ids {
     pub const CINEMATIC: &[u8] = &[0x16, 0x19, 0x1C, 0x1F, 0x22, 0x25, 0x28, 0x7F];
     pub const VIDEO2: &[u8] = &[0x11];
 }
+
+/// Bundled per-release tables. Used by the disassembler and
+/// release dispatch in the CLI.
+pub const RELEASE_DATA: crate::releases::ReleaseData = crate::releases::ReleaseData {
+    slug: "amiga",
+    stage_titles: STAGE_TITLES,
+    known_labels: KNOWN_LABELS,
+    possibly_unused_codeblocks: POSSIBLY_UNUSED_CODEBLOCKS,
+    labeled_cinematic_entries: LABELED_CINEMATIC_ENTRIES_OVERRIDE,
+    resource_ids: crate::romset::ResourceIds {
+        bytecode: resource_ids::BYTECODE,
+        cinematic: resource_ids::CINEMATIC,
+        palette: resource_ids::PALETTE,
+        video2: resource_ids::VIDEO2,
+    },
+};

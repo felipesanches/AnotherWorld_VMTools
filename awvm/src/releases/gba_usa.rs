@@ -497,3 +497,14 @@ pub const LABELED_CINEMATIC_ENTRIES_OVERRIDE: &[(u32, &[(u32, &str)])] = &[
         (0xDDB2, "SCENARIO_1ST_SCREEN_TO_THE_RIGHT_10"),
     ]),
 ];
+
+/// Bundled per-release tables. Used by the disassembler and
+/// release dispatch in the CLI.
+pub const RELEASE_DATA: crate::releases::ReleaseData = crate::releases::ReleaseData {
+    slug: "gba_usa",
+    stage_titles: STAGE_TITLES,
+    known_labels: KNOWN_LABELS,
+    possibly_unused_codeblocks: POSSIBLY_UNUSED_CODEBLOCKS,
+    labeled_cinematic_entries: LABELED_CINEMATIC_ENTRIES_OVERRIDE,
+    resource_ids: crate::romset::ResourceIds { bytecode: &[], cinematic: &[], palette: &[], video2: &[] },
+};

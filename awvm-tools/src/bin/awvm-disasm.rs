@@ -17,7 +17,11 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
-use awvm::{bank, disasm, disasm::Video2Accumulator, memlist, polygons, releases::msdos, romset};
+use awvm::{
+    bank, disasm,
+    disasm::Video2Accumulator,
+    memlist, polygons, releases, romset,
+};
 
 fn usage() -> ExitCode {
     eprintln!(
@@ -55,7 +59,7 @@ fn main() -> ExitCode {
         }
     };
 
-    let (disasm_dir, romset_dir) = match release.as_deref() {
+    let release_slug = match release.as_deref() {
         None => {
             // The Python reference's no-release-name branch is broken
             // (references undefined `romset_dir`); we error out for
@@ -63,25 +67,27 @@ fn main() -> ExitCode {
             eprintln!(
                 "running awvm-disasm without a release name is not supported \
                  (this matches the broken Python reference behaviour). \
-                 Pass `msdos` to use the MSDOS pipeline."
+                 Pass a release slug (msdos, amiga, snes, genesis_europe, gba_usa, symbian_demo)."
             );
             return ExitCode::from(2);
         }
-        Some("msdos") => {
-            let output_dir = cwd.join("output");
-            let release_out = output_dir.join("msdos");
-            (
-                release_out.join("disasm"),
-                release_out.join("romset"),
-            )
-        }
-        Some(other) => {
-            eprintln!("unsupported release {:?}; only `msdos` is implemented today", other);
+        Some(s) => s.to_owned(),
+    };
+
+    let release_data = match releases::by_slug(&release_slug) {
+        Some(rd) => rd,
+        None => {
+            eprintln!("unknown release {:?}", release_slug);
             return ExitCode::from(2);
         }
     };
 
-    println!("\n=== msdos ===");
+    let output_dir = cwd.join("output");
+    let release_out = output_dir.join(&release_slug);
+    let disasm_dir = release_out.join("disasm");
+    let romset_dir = release_out.join("romset");
+
+    println!("\n=== {} ===", release_slug);
 
     // Step 1: banks2resources
     let resources_dir = romset_dir.parent().unwrap().join("resources");
@@ -92,17 +98,11 @@ fn main() -> ExitCode {
 
     // Step 2: resources2romset
     let hardcoded = locate_hardcoded_data();
-    let ids = romset::ResourceIds {
-        bytecode: msdos::resource_ids::BYTECODE,
-        cinematic: msdos::resource_ids::CINEMATIC,
-        palette: msdos::resource_ids::PALETTE,
-        video2: msdos::resource_ids::VIDEO2,
-    };
     if let Err(e) = romset::generate(
         &resources_dir,
         romset_dir.parent().unwrap(),
         &hardcoded,
-        ids,
+        release_data.resource_ids,
     ) {
         eprintln!("resources2romset failed: {e}");
         return ExitCode::from(1);
@@ -148,6 +148,7 @@ fn main() -> ExitCode {
             &str_index,
             &asm,
             &mut video2,
+            release_data,
         ) {
             Ok(d) => d,
             Err(e) => {
