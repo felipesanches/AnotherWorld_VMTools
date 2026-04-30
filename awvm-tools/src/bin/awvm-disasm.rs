@@ -121,6 +121,7 @@ fn main() -> ExitCode {
             CartridgeSpec {
                 source_filename: "Out of This World (USA).sfc",
                 bytecode_chunks: &[(0x74A4C, 0x26A7), (0x81CB0, 0x51FD)],
+                string_extraction: None,
             },
         ),
         "genesis_europe" => prepare_cartridge_romset(
@@ -138,6 +139,9 @@ fn main() -> ExitCode {
                     (0xbcab8, 0x0b5a),
                     (0xada78, 0x0be4),
                 ],
+                // genesis2romset.py:generate_text_string_roms walks the
+                // cartridge from 0x382B to 0x46FE inclusive.
+                string_extraction: Some((0x382B, 0x46FE)),
             },
         ),
         "gba_usa" => prepare_cartridge_romset(
@@ -147,6 +151,7 @@ fn main() -> ExitCode {
             CartridgeSpec {
                 source_filename: "Another World (Prototype) # GBA.GBA",
                 bytecode_chunks: &[(0x6ea74, 0x10000), (0x813f8, 0x10000)],
+                string_extraction: None,
             },
         ),
         other => {
@@ -273,6 +278,14 @@ struct CartridgeSpec<'a> {
     /// `bytecode.rom`. Each chunk is padded with `0xFF` to 0x10000
     /// bytes (one game level slab) before the next chunk is appended.
     bytecode_chunks: &'a [(usize, usize)],
+    /// Where to source the text-string ROMs from:
+    /// - `Some((start, end))`: extract genesis-style from the
+    ///   cartridge over `[start, end]` (inclusive end), pre-extending
+    ///   `str_data.rom` to 0x1000 and `str_index.rom` to 0x800 with
+    ///   zeros to match the Python reference's output bytes.
+    /// - `None`: copy the hardcoded MSDOS string ROMs from
+    ///   `hardcoded_data/`.
+    string_extraction: Option<(usize, usize)>,
 }
 
 /// Pipeline for releases packaged as memlist + bank<NN> files
@@ -368,9 +381,70 @@ fn prepare_cartridge_romset(
     }
     fs::write(romset_dir.join("bytecode.rom"), &bytecode)?;
 
-    for filename in ["str_data.rom", "str_index.rom", "anotherworld_chargen.rom"] {
-        fs::copy(hardcoded.join(filename), romset_dir.join(filename))?;
+    if let Some((start, end)) = spec.string_extraction {
+        extract_cartridge_strings(&raw, start, end, &romset_dir)?;
+        // Chargen still comes from hardcoded_data — no per-release
+        // chargen extraction has been ported yet.
+        fs::copy(
+            hardcoded.join("anotherworld_chargen.rom"),
+            romset_dir.join("anotherworld_chargen.rom"),
+        )?;
+    } else {
+        for filename in ["str_data.rom", "str_index.rom", "anotherworld_chargen.rom"] {
+            fs::copy(hardcoded.join(filename), romset_dir.join(filename))?;
+        }
     }
+    Ok(())
+}
+
+/// Port of `genesis2romset.py:generate_text_string_roms`. Walks the
+/// cartridge from `start` through `end` reading `(BE 16-bit index,
+/// null-terminated ASCII string)` records; writes them into
+/// `str_data.rom` (sequential null-terminated payload) and
+/// `str_index.rom` (`index*2` → little-endian offset into
+/// `str_data.rom`). Both ROMs are pre-extended to 0x1000 / 0x800
+/// bytes with zeros to match the Python reference.
+fn extract_cartridge_strings(
+    raw: &[u8],
+    start: usize,
+    end: usize,
+    romset_dir: &Path,
+) -> std::io::Result<()> {
+    let mut str_data: Vec<u8> = vec![0u8; 0x1000];
+    let mut str_index: Vec<u8> = vec![0u8; 0x800];
+
+    let mut strdata_addr: usize = 0;
+    let mut addr: usize = start;
+
+    while addr <= end && addr + 1 < raw.len() {
+        let index = ((raw[addr] as usize) << 8) | (raw[addr + 1] as usize);
+        addr += 2;
+
+        let idx_pos = index * 2;
+        if idx_pos + 2 > str_index.len() {
+            str_index.resize(idx_pos + 2, 0);
+        }
+        str_index[idx_pos] = (strdata_addr & 0xff) as u8;
+        str_index[idx_pos + 1] = ((strdata_addr >> 8) & 0xff) as u8;
+
+        while addr < raw.len() && raw[addr] != 0 {
+            if strdata_addr >= str_data.len() {
+                str_data.resize(strdata_addr + 1, 0);
+            }
+            str_data[strdata_addr] = raw[addr];
+            addr += 1;
+            strdata_addr += 1;
+        }
+        if strdata_addr >= str_data.len() {
+            str_data.resize(strdata_addr + 1, 0);
+        }
+        str_data[strdata_addr] = 0;
+        strdata_addr += 1;
+        addr += 1; // skip the null in the cartridge
+    }
+
+    fs::write(romset_dir.join("str_data.rom"), &str_data)?;
+    fs::write(romset_dir.join("str_index.rom"), &str_index)?;
     Ok(())
 }
 
