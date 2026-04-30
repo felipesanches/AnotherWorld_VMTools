@@ -89,13 +89,24 @@ fn main() -> ExitCode {
 
     println!("\n=== {} ===", release_slug);
 
-    // Step 1: extract resources via the per-release pipeline.
-    let resources_dir = release_out.join("resources");
+    // Per-release pipeline: produces <release_out>/romset/ with at
+    // minimum bytecode.rom plus the hardcoded text/font ROMs the
+    // disassembler needs for the `text` opcode.
+    let hardcoded = locate_hardcoded_data();
     let prep_result = match release_slug.as_str() {
-        "msdos" => prepare_bank_release(&input_dir, &release_out, /* uppercase */ false, MemlistSource::File("memlist.bin")),
-        "amiga" => prepare_bank_release(
+        "msdos" => prepare_bank_romset(
             &input_dir,
             &release_out,
+            &hardcoded,
+            release_data.resource_ids,
+            /* uppercase */ false,
+            MemlistSource::File("memlist.bin"),
+        ),
+        "amiga" => prepare_bank_romset(
+            &input_dir,
+            &release_out,
+            &hardcoded,
+            release_data.resource_ids,
             /* uppercase */ true,
             MemlistSource::Embedded {
                 file: "another",
@@ -103,30 +114,52 @@ fn main() -> ExitCode {
                 length: 20 * 147,
             },
         ),
+        "snes" => prepare_cartridge_romset(
+            &input_dir,
+            &release_out,
+            &hardcoded,
+            CartridgeSpec {
+                source_filename: "Out of This World (USA).sfc",
+                bytecode_chunks: &[(0x74A4C, 0x26A7), (0x81CB0, 0x51FD)],
+            },
+        ),
+        "genesis_europe" => prepare_cartridge_romset(
+            &input_dir,
+            &release_out,
+            &hardcoded,
+            CartridgeSpec {
+                source_filename: "Another World (Europe).md",
+                bytecode_chunks: &[
+                    (0x3f576, 0x51fe),
+                    (0x5281a, 0x9c9a),
+                    (0x693e8, 0xf564),
+                    (0x88716, 0x1f88),
+                    (0x919a0, 0xc714),
+                    (0xbcab8, 0x0b5a),
+                    (0xada78, 0x0be4),
+                ],
+            },
+        ),
+        "gba_usa" => prepare_cartridge_romset(
+            &input_dir,
+            &release_out,
+            &hardcoded,
+            CartridgeSpec {
+                source_filename: "Another World (Prototype) # GBA.GBA",
+                bytecode_chunks: &[(0x6ea74, 0x10000), (0x813f8, 0x10000)],
+            },
+        ),
         other => {
             eprintln!(
-                "release {:?}: prepare_resources not implemented yet \
-                 (only msdos and amiga today; snes, genesis_europe, gba_usa, \
-                 symbian_demo are pending)",
+                "release {:?}: prepare_romset not implemented yet \
+                 (symbian_demo needs zlib + lzma decompression and is pending)",
                 other
             );
             return ExitCode::from(2);
         }
     };
     if let Err(e) = prep_result {
-        eprintln!("resource prep failed for {}: {e}", release_slug);
-        return ExitCode::from(1);
-    }
-
-    // Step 2: resources2romset
-    let hardcoded = locate_hardcoded_data();
-    if let Err(e) = romset::generate(
-        &resources_dir,
-        &release_out,
-        &hardcoded,
-        release_data.resource_ids,
-    ) {
-        eprintln!("resources2romset failed: {e}");
+        eprintln!("romset prep failed for {}: {e}", release_slug);
         return ExitCode::from(1);
     }
 
@@ -162,7 +195,7 @@ fn main() -> ExitCode {
     for level in levels {
         println!("disassembling level {level}...");
         let level_dir = disasm_dir.join(format!("level_{level}"));
-        let asm = level_dir.join(format!("msdos_level-{level}.asm"));
+        let asm = level_dir.join(format!("{}_level-{level}.asm", release_slug));
         let dis = match disasm::disassemble_level(
             &gamerom,
             level,
@@ -232,14 +265,25 @@ enum MemlistSource<'a> {
     Embedded { file: &'a str, offset: usize, length: usize },
 }
 
+/// Per-cartridge-release recipe.
+struct CartridgeSpec<'a> {
+    /// Filename inside `input_dir` that holds the cartridge ROM.
+    source_filename: &'a str,
+    /// `(byte_offset, length)` pairs to extract sequentially into
+    /// `bytecode.rom`. Each chunk is padded with `0xFF` to 0x10000
+    /// bytes (one game level slab) before the next chunk is appended.
+    bytecode_chunks: &'a [(usize, usize)],
+}
+
 /// Pipeline for releases packaged as memlist + bank<NN> files
-/// (msdos, amiga). Reads the memlist from the per-release source,
-/// then for each entry pulls the resource bytes out of the bank
-/// (decompressing if needed) and writes
-/// `<release_out>/resources/resource-0xNN.bin`.
-fn prepare_bank_release(
+/// (msdos, amiga). Reads the memlist, extracts every resource into
+/// `<release_out>/resources/resource-0xNN.bin`, then runs the shared
+/// resources2romset step to produce the romset.
+fn prepare_bank_romset(
     input_dir: &Path,
     release_out: &Path,
+    hardcoded: &Path,
+    ids: romset::ResourceIds<'_>,
     uppercase: bool,
     source: MemlistSource<'_>,
 ) -> std::io::Result<()> {
@@ -284,6 +328,48 @@ fn prepare_bank_release(
                 ));
             }
         }
+    }
+
+    romset::generate(&resources_dir, release_out, hardcoded, ids).map_err(|e| {
+        std::io::Error::new(std::io::ErrorKind::Other, format!("resources2romset: {e}"))
+    })?;
+    Ok(())
+}
+
+/// Pipeline for releases packaged as a single cartridge ROM (snes,
+/// genesis_europe, gba_usa, symbian_demo). Extracts hardcoded byte
+/// chunks into bytecode.rom (each chunk padded to 0x10000 with
+/// 0xFF), then copies the hardcoded text / font ROMs the
+/// disassembler needs for the `text` opcode.
+fn prepare_cartridge_romset(
+    input_dir: &Path,
+    release_out: &Path,
+    hardcoded: &Path,
+    spec: CartridgeSpec<'_>,
+) -> std::io::Result<()> {
+    let romset_dir = release_out.join("romset");
+    fs::create_dir_all(&romset_dir)?;
+
+    let raw = fs::read(input_dir.join(spec.source_filename))?;
+
+    // Each chunk yields one 0x10000-byte slab; copy whatever is in range and
+    // pad the rest with 0xFF, matching the Python references' behaviour
+    // (some releases — gba_usa in particular — declare a chunk that reads
+    // past EOF and rely on the 0xFF padding to fill the rest of the slab).
+    let mut bytecode = Vec::with_capacity(spec.bytecode_chunks.len() * 0x10000);
+    for (start, length) in spec.bytecode_chunks {
+        let end = start.saturating_add(*length).min(raw.len());
+        let real_start = (*start).min(raw.len());
+        let actual = &raw[real_start..end];
+        bytecode.extend_from_slice(actual);
+        for _ in actual.len()..0x10000 {
+            bytecode.push(0xFF);
+        }
+    }
+    fs::write(romset_dir.join("bytecode.rom"), &bytecode)?;
+
+    for filename in ["str_data.rom", "str_index.rom", "anotherworld_chargen.rom"] {
+        fs::copy(hardcoded.join(filename), romset_dir.join(filename))?;
     }
     Ok(())
 }
