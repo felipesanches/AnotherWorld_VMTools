@@ -124,6 +124,21 @@ fn main() -> ExitCode {
                 string_extraction: None,
             },
         ),
+        // SNES Europe ROM uses the same memory layout as USA — same
+        // bytecode chunk offsets, same level structure. Different
+        // cartridge filename and (presumably) some localised strings,
+        // but those do not affect the chunk offsets the extractor
+        // uses. Validated by round-trip on the locally-archived EU ROM.
+        "snes-eu" | "snes_eu" => prepare_cartridge_romset(
+            &input_dir,
+            &release_out,
+            &hardcoded,
+            CartridgeSpec {
+                source_filename: "Another World (Europe).sfc",
+                bytecode_chunks: &[(0x74A4C, 0x26A7), (0x81CB0, 0x51FD)],
+                string_extraction: None,
+            },
+        ),
         "genesis_europe" => prepare_cartridge_romset(
             &input_dir,
             &release_out,

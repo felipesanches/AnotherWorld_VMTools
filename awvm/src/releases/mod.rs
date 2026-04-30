@@ -26,7 +26,11 @@ pub fn by_slug(slug: &str) -> Option<&'static ReleaseData> {
         "gba_usa" => Some(&gba_usa::RELEASE_DATA),
         "genesis_europe" => Some(&genesis_europe::RELEASE_DATA),
         "msdos" => Some(&msdos::RELEASE_DATA),
-        "snes" => Some(&snes::RELEASE_DATA),
+        // SNES Europe and USA share the same memory layout / level
+        // tables — same chunk offsets, same labels — so `snes-eu`
+        // reuses the `snes` data tables with a different cartridge
+        // filename. Verified by round-trip on the cached EU ROM.
+        "snes" | "snes-eu" | "snes_eu" => Some(&snes::RELEASE_DATA),
         "symbian_demo" => Some(&symbian_demo::RELEASE_DATA),
         _ => None,
     }
