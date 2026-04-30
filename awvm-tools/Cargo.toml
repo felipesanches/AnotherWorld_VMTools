@@ -27,6 +27,10 @@ path = "src/bin/adf-extract.rs"
 name = "valve-pak-extract"
 path = "src/bin/valve-pak-extract.rs"
 
+[[bin]]
+name = "opera-list"
+path = "src/bin/opera-list.rs"
+
 [dependencies]
 awvm = { path = "../awvm" }
 exectrace = { path = "../exectrace" }

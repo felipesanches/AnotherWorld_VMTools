@@ -16,6 +16,7 @@ pub mod asm;
 pub mod bank;
 pub mod disasm;
 pub mod memlist;
+pub mod opera;
 pub mod polygons;
 pub mod releases;
 pub mod romset;
