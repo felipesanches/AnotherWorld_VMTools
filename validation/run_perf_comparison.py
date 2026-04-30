@@ -181,9 +181,12 @@ exec(open('{REPO}/awvm-disasm.py').read())
         prep=lambda: shutil.rmtree(py_dir / "output", ignore_errors=True),
     )
 
+    # Apples-to-apples: the Python disasm above runs with the polygon
+    # decoder stubbed (it crashes mid-run otherwise). The Rust build
+    # gets `--no-polygons` so it skips the same step.
     rs_dis_cmd = [
         str(REPO / "target/release/awvm-disasm"),
-        str(input_dir), "all_levels", "msdos",
+        str(input_dir), "all_levels", "msdos", "--no-polygons",
     ]
     rs_med2 = measure(
         "  rust   (target/release)", rs_dis_cmd, args.runs,

@@ -1,12 +1,17 @@
 //! Rust port of `awvm-disasm.py`.
 //!
 //! Usage:
-//!     awvm-disasm <input_dir> <level | "all_levels"> [release_name]
+//!     awvm-disasm <input_dir> <level | "all_levels"> [release_name] [--no-polygons]
 //!
 //! Currently `release_name` only supports `msdos`. The CLI runs the
 //! Phase-A `banks2resources` pipeline, then `resources2romset`, then
 //! disassembles the requested levels into per-level `.asm` files
 //! under `<cwd>/output/<release>/disasm/level_<N>/<release>_level-<N>.asm`.
+//!
+//! `--no-polygons` skips the polygon-SVG extraction step entirely.
+//! Useful for apples-to-apples performance comparison with the
+//! Python reference (whose polygon decoder crashes mid-run on this
+//! fixture and is therefore stubbed in the perf harness anyway).
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -23,13 +28,24 @@ fn usage() -> ExitCode {
 }
 
 fn main() -> ExitCode {
-    let args: Vec<String> = std::env::args().skip(1).collect();
-    if !(args.len() == 2 || args.len() == 3) {
+    let mut positional: Vec<String> = Vec::new();
+    let mut no_polygons = false;
+    for arg in std::env::args().skip(1) {
+        match arg.as_str() {
+            "--no-polygons" => no_polygons = true,
+            other if other.starts_with("--") => {
+                eprintln!("unknown flag: {other}");
+                return usage();
+            }
+            _ => positional.push(arg),
+        }
+    }
+    if !(positional.len() == 2 || positional.len() == 3) {
         return usage();
     }
-    let input_dir = PathBuf::from(&args[0]);
-    let level_arg = &args[1];
-    let release = args.get(2).cloned();
+    let input_dir = PathBuf::from(&positional[0]);
+    let level_arg = &positional[1];
+    let release = positional.get(2).cloned();
 
     let cwd = match std::env::current_dir() {
         Ok(p) => p,
@@ -141,23 +157,29 @@ fn main() -> ExitCode {
         };
         println!("\t{} cinematic entries.", dis.cinematic_entries.len());
 
-        // Cinematic polygons → SVG (Phase D).
-        match polygons::PolygonDecoder::for_cinematic(&romset_dir, level) {
-            Ok(mut pd) => {
-                let cin_dir = level_dir.join("cinematic");
-                let entries: Vec<_> = dis
-                    .cinematic_entries
-                    .iter()
-                    .map(|(a, e)| (*a, e.clone()))
-                    .collect();
-                if let Err(e) = pd.extract(entries, &cin_dir) {
-                    eprintln!("level {level}: cinematic SVG extract: {e}");
+        if !no_polygons {
+            // Cinematic polygons → SVG (Phase D).
+            match polygons::PolygonDecoder::for_cinematic(&romset_dir, level) {
+                Ok(mut pd) => {
+                    let cin_dir = level_dir.join("cinematic");
+                    let entries: Vec<_> = dis
+                        .cinematic_entries
+                        .iter()
+                        .map(|(a, e)| (*a, e.clone()))
+                        .collect();
+                    if let Err(e) = pd.extract(entries, &cin_dir) {
+                        eprintln!("level {level}: cinematic SVG extract: {e}");
+                    }
                 }
+                Err(e) => eprintln!("level {level}: cinematic decoder init: {e}"),
             }
-            Err(e) => eprintln!("level {level}: cinematic decoder init: {e}"),
         }
     }
     println!("\t{} video2 entries.", video2.entries.len());
+
+    if no_polygons {
+        return ExitCode::SUCCESS;
+    }
 
     // Common video (video2) polygons → SVG.
     match polygons::PolygonDecoder::for_video2(&romset_dir) {
