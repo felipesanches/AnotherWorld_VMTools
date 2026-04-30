@@ -89,10 +89,32 @@ fn main() -> ExitCode {
 
     println!("\n=== {} ===", release_slug);
 
-    // Step 1: banks2resources
-    let resources_dir = romset_dir.parent().unwrap().join("resources");
-    if let Err(e) = build_resources(&input_dir, romset_dir.parent().unwrap()) {
-        eprintln!("banks2resources failed: {e}");
+    // Step 1: extract resources via the per-release pipeline.
+    let resources_dir = release_out.join("resources");
+    let prep_result = match release_slug.as_str() {
+        "msdos" => prepare_bank_release(&input_dir, &release_out, /* uppercase */ false, MemlistSource::File("memlist.bin")),
+        "amiga" => prepare_bank_release(
+            &input_dir,
+            &release_out,
+            /* uppercase */ true,
+            MemlistSource::Embedded {
+                file: "another",
+                offset: 0x5ec2,
+                length: 20 * 147,
+            },
+        ),
+        other => {
+            eprintln!(
+                "release {:?}: prepare_resources not implemented yet \
+                 (only msdos and amiga today; snes, genesis_europe, gba_usa, \
+                 symbian_demo are pending)",
+                other
+            );
+            return ExitCode::from(2);
+        }
+    };
+    if let Err(e) = prep_result {
+        eprintln!("resource prep failed for {}: {e}", release_slug);
         return ExitCode::from(1);
     }
 
@@ -100,7 +122,7 @@ fn main() -> ExitCode {
     let hardcoded = locate_hardcoded_data();
     if let Err(e) = romset::generate(
         &resources_dir,
-        romset_dir.parent().unwrap(),
+        &release_out,
         &hardcoded,
         release_data.resource_ids,
     ) {
@@ -201,19 +223,56 @@ fn main() -> ExitCode {
     ExitCode::SUCCESS
 }
 
-/// Wraps the Phase-A logic from `awvm-tools/src/bin/banks2resources.rs`.
-/// We re-call the library here rather than shelling to the binary.
-fn build_resources(input_dir: &Path, output_dir: &Path) -> std::io::Result<()> {
-    let resources_dir = output_dir.join("resources");
+/// Where to find the memlist for a bank-format release.
+enum MemlistSource<'a> {
+    /// Plain file alongside the bank<NN> files.
+    File(&'a str),
+    /// Embedded inside another binary at a fixed offset (e.g. amiga's
+    /// `another` executable holds the memlist at offset 0x5ec2).
+    Embedded { file: &'a str, offset: usize, length: usize },
+}
+
+/// Pipeline for releases packaged as memlist + bank<NN> files
+/// (msdos, amiga). Reads the memlist from the per-release source,
+/// then for each entry pulls the resource bytes out of the bank
+/// (decompressing if needed) and writes
+/// `<release_out>/resources/resource-0xNN.bin`.
+fn prepare_bank_release(
+    input_dir: &Path,
+    release_out: &Path,
+    uppercase: bool,
+    source: MemlistSource<'_>,
+) -> std::io::Result<()> {
+    let resources_dir = release_out.join("resources");
     fs::create_dir_all(&resources_dir)?;
-    let memlist_bytes = fs::read(input_dir.join("memlist.bin"))?;
+
+    let memlist_bytes: Vec<u8> = match source {
+        MemlistSource::File(name) => fs::read(input_dir.join(name))?,
+        MemlistSource::Embedded { file, offset, length } => {
+            let raw = fs::read(input_dir.join(file))?;
+            if offset + length > raw.len() {
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    format!(
+                        "{}: cannot read {} bytes at offset 0x{:x} (file is {} bytes)",
+                        file,
+                        length,
+                        offset,
+                        raw.len()
+                    ),
+                ));
+            }
+            raw[offset..offset + length].to_vec()
+        }
+    };
+
     let entries = memlist::parse(&memlist_bytes)?;
     for (i, entry) in entries.iter().enumerate() {
-        let bank_path = bank::bank_path(input_dir, entry.bank_id, false);
+        let bank_path = bank::bank_path(input_dir, entry.bank_id, uppercase);
         if !bank_path.exists() {
             continue;
         }
-        match bank::read_resource(input_dir, entry, false) {
+        match bank::read_resource(input_dir, entry, uppercase) {
             Ok(data) => {
                 let out = resources_dir.join(format!("resource-0x{:02x}.bin", i));
                 fs::write(out, data)?;
