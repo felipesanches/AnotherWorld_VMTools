@@ -20,3 +20,4 @@ pub mod polygons;
 pub mod releases;
 pub mod romset;
 pub mod unpacker;
+pub mod valve_pak;

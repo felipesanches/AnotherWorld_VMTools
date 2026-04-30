@@ -23,6 +23,10 @@ path = "src/bin/awvm-asm.rs"
 name = "adf-extract"
 path = "src/bin/adf-extract.rs"
 
+[[bin]]
+name = "valve-pak-extract"
+path = "src/bin/valve-pak-extract.rs"
+
 [dependencies]
 awvm = { path = "../awvm" }
 exectrace = { path = "../exectrace" }
