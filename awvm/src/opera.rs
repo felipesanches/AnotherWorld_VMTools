@@ -16,9 +16,10 @@
 //!
 //! - Each directory block starts with a 20-byte header (linkage +
 //!   first-free-byte / first-entry-byte offsets) followed by
-//!   variable-length entries. Each entry is at least 72 bytes (a
-//!   fixed prefix) plus 4 × (`last_avatar` + 1) bytes for the
-//!   per-extent block pointers.
+//!   variable-length entries. Each entry has a 68-byte fixed
+//!   prefix (flags, id, type, block_size, byte_count, block_count,
+//!   burst, gap, 32-byte name, last_avatar) followed by the avatar
+//!   list (`last_avatar + 1` u32 LBAs).
 //!
 //! - File data is read by walking the entry's avatar list — each
 //!   avatar is the LBA of one extent of the file (the same data
@@ -146,15 +147,19 @@ impl OperaImage {
     }
 
     /// List directory entries in the directory whose first block is
-    /// at LBA `dir_block`.
+    /// at LBA `dir_block` (the start of avatar 0).
     pub fn list_dir(&self, dir_block: u32) -> Result<Vec<DirEntry>, OperaError> {
+        let avatar_start = dir_block;
         let mut block = dir_block;
         let mut out = Vec::new();
         loop {
             let buf = self.sector(block)?;
             // Directory block header (20 bytes):
-            //   0..3   next_block (u32 BE) — LBA of next dir block in chain (0xFFFFFFFF = none)
-            //   4..7   prev_block (u32 BE)
+            //   0..3   next_block — logical block index of next dir block within
+            //          this directory (0xFFFFFFFF = no more). Physical LBA is
+            //          `avatar_start + next_block`.
+            //   4..7   prev_block — logical block index of previous dir block,
+            //          or 0xFFFFFFFF for the first block.
             //   8..11  flags
             //   12..15 first_free (offset of first free byte in this block)
             //   16..19 first_entry (offset of first entry in this block, usually 0x14)
@@ -163,11 +168,8 @@ impl OperaImage {
             let first_entry = read_be_u32(&buf[16..20]) as usize;
 
             let mut pos = first_entry;
-            while pos < first_free.min(SECTOR_DATA) {
+            while pos + 68 <= first_free.min(SECTOR_DATA) {
                 let entry_start = pos;
-                if entry_start + 72 > buf.len() {
-                    break;
-                }
                 let flags = read_be_u32(&buf[entry_start..entry_start + 4]);
                 let id = read_be_u32(&buf[entry_start + 4..entry_start + 8]);
                 let mut typ = [0u8; 4];
@@ -179,15 +181,13 @@ impl OperaImage {
                 let _gap = read_be_u32(&buf[entry_start + 28..entry_start + 32]);
                 let name = read_cstr(&buf[entry_start + 32..entry_start + 32 + 32]);
                 let last_avatar = read_be_u32(&buf[entry_start + 64..entry_start + 68]) as usize;
-                // The avatar list begins at entry_start + 72 — 4 bytes per avatar,
-                // with `last_avatar + 1` total entries.
-                let avatar_list_off = entry_start + 72;
+                let avatar_list_off = entry_start + 68;
                 let first_block = if avatar_list_off + 4 <= buf.len() {
                     read_be_u32(&buf[avatar_list_off..avatar_list_off + 4])
                 } else {
                     0
                 };
-                let entry_size = 72 + 4 * (last_avatar + 1);
+                let entry_size = 68 + 4 * (last_avatar + 1);
                 if name.is_empty() && byte_count == 0 {
                     break;
                 }
@@ -201,16 +201,12 @@ impl OperaImage {
                     id,
                 });
                 pos = entry_start + entry_size;
-                // Align to 4 bytes (Opera entries are 4-byte aligned).
-                if pos % 4 != 0 {
-                    pos += 4 - (pos % 4);
-                }
             }
 
             if next_block == 0xFFFF_FFFF {
                 break;
             }
-            block = next_block;
+            block = avatar_start + next_block;
         }
         Ok(out)
     }
@@ -240,24 +236,42 @@ impl OperaImage {
     }
 }
 
-/// Convenience: extract every file in the root directory of `bin_path`
-/// into `out_dir` (no recursion into subdirectories yet).
+/// Recursively extract every file under the root directory of
+/// `bin_path` into `out_dir`, mirroring the on-disc directory tree.
 pub fn extract_root_to_dir(bin_path: &Path, out_dir: &Path) -> Result<Vec<PathBuf>, OperaError> {
     let img = OperaImage::from_path(bin_path)?;
     let root_block = img.root_dir_block()?;
-    let entries = img.list_dir(root_block)?;
-    fs::create_dir_all(out_dir)?;
     let mut written = Vec::new();
+    fs::create_dir_all(out_dir)?;
+    extract_dir_recursive(&img, root_block, out_dir, &mut written)?;
+    Ok(written)
+}
+
+fn extract_dir_recursive(
+    img: &OperaImage,
+    dir_block: u32,
+    out_dir: &Path,
+    written: &mut Vec<PathBuf>,
+) -> Result<(), OperaError> {
+    let entries = img.list_dir(dir_block)?;
     for e in entries {
-        if e.is_directory() {
+        // Skip Opera-internal "label" / synthetic entries — they are not
+        // files in the user-visible filesystem.
+        if &e.typ == b"*lbl" {
             continue;
         }
-        let bytes = img.read_file(&e)?;
-        let path = out_dir.join(&e.name);
-        fs::write(&path, bytes)?;
-        written.push(path);
+        if e.is_directory() {
+            let sub = out_dir.join(&e.name);
+            fs::create_dir_all(&sub)?;
+            extract_dir_recursive(img, e.first_block, &sub, written)?;
+        } else {
+            let bytes = img.read_file(&e)?;
+            let path = out_dir.join(&e.name);
+            fs::write(&path, bytes)?;
+            written.push(path);
+        }
     }
-    Ok(written)
+    Ok(())
 }
 
 fn read_be_u32(buf: &[u8]) -> u32 {
