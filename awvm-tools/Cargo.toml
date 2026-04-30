@@ -31,6 +31,10 @@ path = "src/bin/valve-pak-extract.rs"
 name = "opera-list"
 path = "src/bin/opera-list.rs"
 
+[[bin]]
+name = "mac-stuffit-extract"
+path = "src/bin/mac_stuffit_extract.rs"
+
 [dependencies]
 awvm = { path = "../awvm" }
 exectrace = { path = "../exectrace" }
@@ -38,3 +42,9 @@ exectrace = { path = "../exectrace" }
 # symbian_demo's romset prep needs zlib (outer) + LZMA1 (inner) decompression.
 flate2 = "1.0"
 lzma-rs = "0.3"
+
+# mac-stuffit-extract: parse 1993 Mac StuffIt archives + their MacBinary
+# resource forks. Both crates depend on stable + small upstream crates
+# only; the stuffit crate covers StuffIt 1-5 and the Mac-Compactor era.
+stuffit = { version = "0.1.4", default-features = false }
+macbinary = "0.2.1"
