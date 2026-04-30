@@ -35,6 +35,10 @@ path = "src/bin/opera-list.rs"
 name = "mac-stuffit-extract"
 path = "src/bin/mac_stuffit_extract.rs"
 
+[[bin]]
+name = "mac-rsrc-walk"
+path = "src/bin/mac_rsrc_walk.rs"
+
 [dependencies]
 awvm = { path = "../awvm" }
 exectrace = { path = "../exectrace" }

@@ -80,20 +80,30 @@ fn main() -> ExitCode {
             .map(|c: char| if c.is_alphanumeric() || matches!(c, '.' | '_' | '-' | ' ') { c } else { '_' })
             .collect();
 
+        // The forks on the entry are still *compressed* — we have to
+        // call decompressed_forks() to get the raw data + resource
+        // fork bytes. Folder entries have empty forks; for those
+        // decompressed_forks() trivially returns empty Vecs.
+        let (data, rsrc) = match entry.decompressed_forks() {
+            Ok(p) => p,
+            Err(e) => {
+                eprintln!("WARN: decompress failed for {name:?}: {e} (skipping)");
+                continue;
+            }
+        };
+
         // Data fork — many entries will have an empty data fork (Mac
         // applications often store everything in the resource fork).
-        let data = &entry.data_fork;
         let dst = out_dir.join(format!("{safe_name}.data"));
-        if let Err(e) = fs::write(&dst, data) {
+        if let Err(e) = fs::write(&dst, &data) {
             eprintln!("write {}: {e}", dst.display());
             return ExitCode::from(1);
         }
 
         // Resource fork — this is where AW VM resources live.
-        let rsrc: &Vec<u8> = &entry.resource_fork;
         if !rsrc.is_empty() {
             let dst = out_dir.join(format!("{safe_name}.rsrc"));
-            if let Err(e) = fs::write(&dst, rsrc) {
+            if let Err(e) = fs::write(&dst, &rsrc) {
                 eprintln!("write {}: {e}", dst.display());
                 return ExitCode::from(1);
             }
