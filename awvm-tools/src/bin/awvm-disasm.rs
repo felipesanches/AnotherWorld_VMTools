@@ -121,6 +121,7 @@ fn main() -> ExitCode {
             CartridgeSpec {
                 source_filename: "Out of This World (USA).sfc",
                 bytecode_chunks: &[(0x74A4C, 0x26A7), (0x81CB0, 0x51FD)],
+                cinematic_chunks: &[],
                 string_extraction: None,
             },
         ),
@@ -136,6 +137,7 @@ fn main() -> ExitCode {
             CartridgeSpec {
                 source_filename: "Another World (Europe).sfc",
                 bytecode_chunks: &[(0x74A4C, 0x26A7), (0x81CB0, 0x51FD)],
+                cinematic_chunks: &[],
                 string_extraction: None,
             },
         ),
@@ -154,18 +156,54 @@ fn main() -> ExitCode {
                     (0xbcab8, 0x0b5a),
                     (0xada78, 0x0be4),
                 ],
+                cinematic_chunks: &[],
                 // genesis2romset.py:generate_text_string_roms walks the
                 // cartridge from 0x382B to 0x46FE inclusive.
                 string_extraction: Some((0x382B, 0x46FE)),
             },
         ),
+        // GBA-Foxy port (2004). The cartridge ROM stores each level's
+        // bytecode immediately followed by that level's cinematic-
+        // polygon slab + a small palette region (research/10 in the
+        // archaeology repo). Chunk offsets are derived as follows:
+        //
+        // level_0 bytecode: 0x6EA74..0x71127 (length 0x26B3, ending
+        //   with the killChannel at chunk-relative 0x26B2). Then a
+        //   1-byte separator (0x0F) at 0x71127, then cinematic at
+        //   0x71128.
+        // level_0 cinematic.rom slab: 0x71128, length 0x10000.
+        //
+        // level_1 bytecode: 0x813F8..0x8661D (length 0x5225). Three
+        //   bytes 0x11/0x11/0x00 at 0x8661D..0x8661F (likely two
+        //   stray killChannels + 1 separator), then cinematic at
+        //   0x86620.
+        // level_1 cinematic.rom slab: 0x86620, length 0x10000.
+        //
+        // Verified by brute-force scan: at the cinematic-base offsets
+        // above, ALL the CINEMATIC_xxx labels referenced in each
+        // level's disassembly resolve to valid polygon-entry bytes
+        // (≥ 0xC0 fill, or low-6==0x02 hierarchy). 100 % match for
+        // both levels.
+        //
+        // The previous spec said `bytecode_chunks: &[(0x6ea74, 0x10000),
+        // (0x813f8, 0x10000)]` — capturing each level's full 64 KB.
+        // That over-extracted: it bundled cinematic data into
+        // bytecode.rom as if it were bytecode, so the disassembler
+        // emitted ~55 KB of `db <bytes>` per level after the actual
+        // killChannel.
+        //
+        // TODO: stages 3-7 in `gba_usa.rs` STAGE_TITLES are not yet
+        // mapped. The pattern (bytecode | sep | cinematic | small palette)
+        // probably repeats; a brute-force scan after disassembling
+        // those levels would pin them down.
         "gba_usa" => prepare_cartridge_romset(
             &input_dir,
             &release_out,
             &hardcoded,
             CartridgeSpec {
                 source_filename: "Another World (Prototype) # GBA.GBA",
-                bytecode_chunks: &[(0x6ea74, 0x10000), (0x813f8, 0x10000)],
+                bytecode_chunks: &[(0x6EA74, 0x26B3), (0x813F8, 0x5225)],
+                cinematic_chunks: &[(0x71128, 0x10000), (0x86620, 0x10000)],
                 string_extraction: None,
             },
         ),
@@ -289,7 +327,23 @@ struct CartridgeSpec<'a> {
     /// `(byte_offset, length)` pairs to extract sequentially into
     /// `bytecode.rom`. Each chunk is padded with `0xFF` to 0x10000
     /// bytes (one game level slab) before the next chunk is appended.
+    /// `length` is the length of the actual bytecode for that level —
+    /// the rest of the slab is filled with `0xFF`. Setting `length` to
+    /// the full `0x10000` was the original (incorrect) behaviour for
+    /// `gba_usa`: it captured cinematic-polygon data that immediately
+    /// follows each level's bytecode in the GBA ROM as if the data
+    /// were bytecode. See `cinematic_chunks` and research/10.
     bytecode_chunks: &'a [(usize, usize)],
+    /// `(byte_offset, length)` pairs to extract sequentially into
+    /// `cinematic.rom`. Each chunk is padded with `0xFF` to 0x10000
+    /// (one cinematic-bank level slab). Empty `&[]` means the
+    /// cartridge stores cinematic data elsewhere (or it hasn't been
+    /// mapped yet) — `cinematic.rom` is not produced.
+    ///
+    /// For cartridge ports the cinematic data lives directly in the
+    /// cartridge ROM (no separate per-resource compression) at fixed
+    /// offsets that have to be discovered per-port.
+    cinematic_chunks: &'a [(usize, usize)],
     /// Where to source the text-string ROMs from:
     /// - `Some((start, end))`: extract genesis-style from the
     ///   cartridge over `[start, end]` (inclusive end), pre-extending
@@ -381,17 +435,30 @@ fn prepare_cartridge_romset(
     // pad the rest with 0xFF, matching the Python references' behaviour
     // (some releases — gba_usa in particular — declare a chunk that reads
     // past EOF and rely on the 0xFF padding to fill the rest of the slab).
-    let mut bytecode = Vec::with_capacity(spec.bytecode_chunks.len() * 0x10000);
-    for (start, length) in spec.bytecode_chunks {
-        let end = start.saturating_add(*length).min(raw.len());
-        let real_start = (*start).min(raw.len());
-        let actual = &raw[real_start..end];
-        bytecode.extend_from_slice(actual);
-        for _ in actual.len()..0x10000 {
-            bytecode.push(0xFF);
+    fn extract_padded_chunks(raw: &[u8], chunks: &[(usize, usize)]) -> Vec<u8> {
+        let mut out = Vec::with_capacity(chunks.len() * 0x10000);
+        for (start, length) in chunks {
+            let end = start.saturating_add(*length).min(raw.len());
+            let real_start = (*start).min(raw.len());
+            let actual = &raw[real_start..end];
+            out.extend_from_slice(actual);
+            for _ in actual.len()..0x10000 {
+                out.push(0xFF);
+            }
         }
+        out
     }
+
+    let bytecode = extract_padded_chunks(&raw, spec.bytecode_chunks);
     fs::write(romset_dir.join("bytecode.rom"), &bytecode)?;
+
+    // Cinematic-polygon data, if the per-port spec has identified its
+    // location in the cartridge ROM. Same layout as bytecode.rom: one
+    // 0x10000-byte slab per level, 0xFF-padded.
+    if !spec.cinematic_chunks.is_empty() {
+        let cinematic = extract_padded_chunks(&raw, spec.cinematic_chunks);
+        fs::write(romset_dir.join("cinematic.rom"), &cinematic)?;
+    }
 
     if let Some((start, end)) = spec.string_extraction {
         extract_cartridge_strings(&raw, start, end, &romset_dir)?;
