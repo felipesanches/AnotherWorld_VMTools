@@ -331,9 +331,17 @@ impl<'v> Disassembler for AwvmDisassembler<'v> {
 /// Decide which round-trip annotation (if any) is needed for an
 /// instruction whose source-form is `text` and whose original bytes
 /// are `raw`. Returns either `text` unchanged (canonical), `text`
-/// with a `;@enc=…` suffix appended, `text` with a `_trailing`
-/// operand inserted (for setPalette), or `text\t;@raw=…` (fallback
-/// for patterns we haven't enumerated yet).
+/// with a `;@enc=…` suffix appended, or `text` with a `_trailing`
+/// operand inserted (for setPalette).
+///
+/// The four catalogued non-canonical patterns are listed below.
+/// Anything else is assumed to round-trip canonically — the
+/// assembler reproduces the bytes from the source mnemonic +
+/// operands alone. If a fresh extraction surfaces a fifth
+/// non-canonical pattern, byte-match verification will fail and
+/// the new pattern needs a new arm here. We deliberately do NOT
+/// emit `;@raw=…` as a fallback: that mechanism was retired in
+/// 2026-05-04 and is now a hard parse error in `awvm-asm`.
 fn classify_encoding(text: &str, raw: &[u8]) -> String {
     // Pattern 1: video zoom-as-var with bit-1 instead of bit-0.
     // Opcodes in the 0x40-0x7F range with `(opcode & 0x03) == 2`
@@ -378,19 +386,9 @@ fn classify_encoding(text: &str, raw: &[u8]) -> String {
         return format!("{}, _trailing=0x00", text);
     }
 
-    // Default: canonical encoding (or unknown) → keep the legacy
-    // `;@raw=` fallback so byte-match doesn't break. Once every
-    // known pattern is enumerated above, this fallback can be
-    // narrowed: when the canonical encoder reproduces `raw`
-    // exactly, drop the annotation; otherwise keep `;@raw=` and
-    // log a "missing pattern" warning. For now, emit `;@raw=` for
-    // everything not covered above.
-    let raw_str = raw
-        .iter()
-        .map(|b| format!("0x{:02X}", b))
-        .collect::<Vec<_>>()
-        .join(",");
-    format!("{}\t;@raw={}", text, raw_str)
+    // Default: canonical encoding. The assembler reproduces the
+    // bytes from `text` alone; no annotation needed.
+    text.to_owned()
 }
 
 impl<'v> AwvmDisassembler<'v> {
