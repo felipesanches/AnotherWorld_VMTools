@@ -40,11 +40,18 @@ struct Instruction {
     operands: Vec<Operand>,
     /// Bytes captured by the disassembler in the `;@raw=...` annotation.
     /// When present, the encoder emits these bytes verbatim instead
-    /// of computing them from `name + operands`. This makes
-    /// disasm → asm round-trip exact even where the canonical
-    /// encoding loses information (unused opcode bits, the
-    /// setPalette waste byte, etc.).
+    /// of computing them from `name + operands`. This is the
+    /// transitional fallback during the `;@raw=` → `;@enc=…`
+    /// migration; it will be removed entirely once every load-bearing
+    /// `;@raw=` in the source tree has been rewritten to a named
+    /// `;@enc=…` form. See `docs/raw_to_enc_migration_plan.md`.
     raw: Option<Vec<u8>>,
+    /// Encoding selector captured from a `;@enc=NAME` annotation. The
+    /// encoder uses this to pick a non-canonical byte encoding when
+    /// the AW VM has redundant forms (e.g. video opcode zoom-as-var
+    /// with bit 1 instead of bit 0; bankSwitch with `0x07Dx`/`0x07Ex`
+    /// operand words instead of canonical `0x3E8x`).
+    enc: Option<String>,
 }
 
 /// Parse one operand token, like `[HERO_ACTION]`, `0x40`, `id=0x012c`.
@@ -103,6 +110,7 @@ fn parse_common(name: &str, line: &str) -> Instruction {
         name: name.to_owned(),
         operands,
         raw: None,
+        enc: None,
     }
 }
 
@@ -402,10 +410,21 @@ fn encode(asm: &mut Asm, instr: &Instruction) {
         }
 
         "setPalette" => {
+            // Opcode 0x0B + 16-bit operand. High byte is the palette
+            // index; the low byte is a "waste byte" the runtime
+            // ignores. Canonical encoding hardcodes the waste byte
+            // to 0xFF; three places in the original bytecode have
+            // 0x00 there instead (all `setPalette 0x00`). Source
+            // uses an explicit `_trailing=0xNN` keyword operand to
+            // request the non-canonical waste byte.
             let pal = &instr.operands[0];
             asm.byte_const(0x0B);
             let pal_int = asm.resolve_or_zero(&pal.value);
-            asm.word_const((pal_int << 8) | 0xFF);
+            let trailing = keyword_operands(instr)
+                .get("_trailing")
+                .map(|op| asm.resolve_or_zero(&op.value) & 0xFF)
+                .unwrap_or(0xFF);
+            asm.word_const((pal_int << 8) | trailing);
         }
 
         "load" => {
@@ -417,8 +436,22 @@ fn encode(asm: &mut Asm, instr: &Instruction) {
         "bankSwitch" => {
             let bank = &instr.operands[0];
             let bank_int = asm.resolve_or_zero(&bank.value);
+            // Opcode 0x19 is shared with `load`; the disassembler
+            // distinguishes by operand-word value. The canonical
+            // encoding is `0x3E80 | bank`, but the original (Chahi-
+            // era) bytecode also uses two non-canonical patterns in
+            // 9 places: `0x07Dx` and `0x07Ex`. Both still decode as
+            // `bankSwitch N` (the disasm warns "uncommon value").
+            // Source uses `;@enc=legacy_d`/`;@enc=legacy_e` to
+            // request the non-canonical encoding for round-trip
+            // fidelity.
+            let word = match instr.enc.as_deref() {
+                Some("legacy_d") => 0x07D0 | (bank_int & 0xF),
+                Some("legacy_e") => 0x07E0 | (bank_int & 0xF),
+                _ => 0x3E80 | (bank_int & 0xF),
+            };
             asm.byte_const(0x19);
-            asm.word_const(0x3E80 | (bank_int & 0xF));
+            asm.word_const(word);
         }
 
         "selectVideoPage" => {
@@ -530,7 +563,17 @@ fn encode_video(asm: &mut Asm, instr: &Instruction) {
 
     if zoom.is_var {
         operand_bytes.push(asm.resolve_or_zero(&zoom.value));
-        opcode |= 0x01;
+        // Two opcode bits encode "zoom = var": bit 0 (canonical) and
+        // bit 1 (alternate). Both decode identically; the AW VM
+        // runtime treats them the same. Original (Chahi-era)
+        // bytecode mixes the two; the disassembler emits `;@enc=alt`
+        // when it sees the bit-1 form so the encoder can round-trip
+        // it byte-exactly.
+        if instr.enc.as_deref() == Some("alt") {
+            opcode |= 0x02;
+        } else {
+            opcode |= 0x01;
+        }
     } else {
         let zv = asm.resolve_or_zero(&zoom.value);
         if zv != 0x40 {
@@ -550,10 +593,13 @@ fn parse_lines(input: &str) -> (HashMap<String, i64>, Vec<(Option<String>, Instr
     let mut pending_label: Option<String> = None;
 
     for src_line in input.lines() {
-        // Extract the round-trip @raw annotation BEFORE the comment-strip
-        // step swallows it. Format produced by awvm-disasm:
-        // `<instr>\t;@raw=0xAA,0xBB,0xCC,...`.
+        // Extract round-trip annotations BEFORE the comment-strip step
+        // swallows them. Two forms exist (mutually exclusive on a single
+        // line in practice):
+        //   `<instr>\t;@raw=0xAA,0xBB,0xCC,...`  (legacy fallback)
+        //   `<instr>\t;@enc=NAME`                (named encoding selector)
         let raw_bytes = parse_raw_marker(src_line);
+        let enc_name = parse_enc_marker(src_line);
         let line = src_line.split(';').next().unwrap_or("").trim().to_owned();
 
         if line.contains("EQU") {
@@ -587,6 +633,7 @@ fn parse_lines(input: &str) -> (HashMap<String, i64>, Vec<(Option<String>, Instr
             if effective_line.trim().starts_with(name) {
                 let mut instr = parse_common(name, &effective_line);
                 instr.raw = raw_bytes.clone();
+                instr.enc = enc_name.clone();
                 output.push((pending_label.take(), instr));
                 break;
             }
@@ -594,6 +641,32 @@ fn parse_lines(input: &str) -> (HashMap<String, i64>, Vec<(Option<String>, Instr
     }
 
     (symbols, output)
+}
+
+/// Parse a `;@enc=NAME` marker out of one line. Returns the
+/// captured name, or `None` if the marker is absent.
+///
+/// Recognised values (validated when the marker is consumed by
+/// the encoder, not here):
+///   - `alt`        — alt zoom-bit encoding for video opcodes
+///                     (bit 1 set instead of bit 0)
+///   - `legacy_d`   — bankSwitch with operand word `0x07Dx`
+///                     instead of canonical `0x3E8x`
+///   - `legacy_e`   — bankSwitch with operand word `0x07Ex`
+///                     instead of canonical `0x3E8x`
+fn parse_enc_marker(line: &str) -> Option<String> {
+    const MARKER: &str = ";@enc=";
+    let idx = line.find(MARKER)?;
+    let rest = &line[idx + MARKER.len()..];
+    let rest = match rest.find(';') {
+        Some(end) => &rest[..end],
+        None => rest,
+    };
+    let name = rest.trim();
+    if name.is_empty() {
+        return None;
+    }
+    Some(name.to_owned())
 }
 
 /// Parse a `;@raw=0xAA,0xBB,...` marker out of one line. Returns

@@ -307,21 +307,90 @@ impl<'v> Disassembler for AwvmDisassembler<'v> {
 
     fn disasm_instruction(&mut self, t: &mut Tracer, opcode: u8) -> String {
         // Wrapper: the actual decoder lives in `do_disasm_instruction`.
-        // After it runs, we harvest the per-instruction byte buffer
-        // the tracer has been filling and append a `;@raw=...`
-        // annotation so the assembler can round-trip the original
-        // bytecode bit-for-bit, matching the Python reference.
+        // After decoding, classify the instruction's BYTE FORM so we
+        // can emit a precise round-trip annotation:
+        //   - Canonical encoding → no annotation needed (the
+        //     assembler reproduces the bytes from the source mnemonic
+        //     alone).
+        //   - Known non-canonical encoding → `;@enc=<NAME>` marker
+        //     (or, for setPalette palette-0 trailing-0x00 case, an
+        //     extra `_trailing=0x00` operand baked into the source
+        //     text).
+        //   - Unknown form → fall back to `;@raw=…` so byte-match
+        //     never breaks. Once every known pattern is enumerated,
+        //     the fallback can be removed.
         let text = self.do_disasm_instruction(t, opcode);
         let raw = match t.current_consumed_bytes() {
-            Some(bs) if !bs.is_empty() => bs
-                .iter()
-                .map(|b| format!("0x{:02X}", b))
-                .collect::<Vec<_>>()
-                .join(","),
+            Some(bs) if !bs.is_empty() => bs.to_vec(),
             _ => return text,
         };
-        format!("{}\t;@raw={}", text, raw)
+        classify_encoding(&text, &raw)
     }
+}
+
+/// Decide which round-trip annotation (if any) is needed for an
+/// instruction whose source-form is `text` and whose original bytes
+/// are `raw`. Returns either `text` unchanged (canonical), `text`
+/// with a `;@enc=…` suffix appended, `text` with a `_trailing`
+/// operand inserted (for setPalette), or `text\t;@raw=…` (fallback
+/// for patterns we haven't enumerated yet).
+fn classify_encoding(text: &str, raw: &[u8]) -> String {
+    // Pattern 1: video zoom-as-var with bit-1 instead of bit-0.
+    // Opcodes in the 0x40-0x7F range with `(opcode & 0x03) == 2`
+    // decode "zoom = var" via the alt path. Source text always
+    // starts with `video` and contains `zoom=[`.
+    if !raw.is_empty() {
+        let op = raw[0];
+        if (0x40..=0x7F).contains(&op)
+            && (op & 0x03) == 0x02
+            && text.trim_start().starts_with("video")
+            && text.contains("zoom=[")
+        {
+            return format!("{}\t;@enc=alt", text);
+        }
+    }
+
+    // Pattern 2: bankSwitch with non-canonical operand word.
+    // Opcode 0x19, operand word in 0x07Dx or 0x07Ex (canonical is
+    // 0x3E8x). Source text starts with `bankSwitch`.
+    if raw.len() >= 3
+        && raw[0] == 0x19
+        && text.trim_start().starts_with("bankSwitch")
+    {
+        let word = ((raw[1] as u16) << 8) | (raw[2] as u16);
+        if (word & 0xFFF0) == 0x07D0 {
+            return format!("{}\t;@enc=legacy_d", text);
+        }
+        if (word & 0xFFF0) == 0x07E0 {
+            return format!("{}\t;@enc=legacy_e", text);
+        }
+    }
+
+    // Pattern 3: setPalette palette-0 with trailing 0x00 (canonical
+    // is 0xFF). Source text starts with `setPalette`. We rewrite
+    // the source line to include an explicit `_trailing=0x00`
+    // operand instead of emitting an annotation.
+    if raw.len() >= 3
+        && raw[0] == 0x0B
+        && raw[2] == 0x00
+        && text.trim_start().starts_with("setPalette")
+    {
+        return format!("{}, _trailing=0x00", text);
+    }
+
+    // Default: canonical encoding (or unknown) → keep the legacy
+    // `;@raw=` fallback so byte-match doesn't break. Once every
+    // known pattern is enumerated above, this fallback can be
+    // narrowed: when the canonical encoder reproduces `raw`
+    // exactly, drop the annotation; otherwise keep `;@raw=` and
+    // log a "missing pattern" warning. For now, emit `;@raw=` for
+    // everything not covered above.
+    let raw_str = raw
+        .iter()
+        .map(|b| format!("0x{:02X}", b))
+        .collect::<Vec<_>>()
+        .join(",");
+    format!("{}\t;@raw={}", text, raw_str)
 }
 
 impl<'v> AwvmDisassembler<'v> {
