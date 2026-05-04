@@ -679,17 +679,36 @@ pub fn assemble(input_path: &Path, output_path: &Path) -> io::Result<()> {
         encode(&mut asm, instruction);
     }
 
-    // Second pass — symbols are now complete; re-emit.
+    // Second pass — symbols are now complete; re-emit. Record
+    // EVERY label-definition's address (not just the last-wins
+    // entry), so downstream tools (e.g. archaeology's
+    // `resymbolize_literals.py`) can answer "which name(s) live
+    // at address X" even when the same name is defined multiple
+    // times.
     asm.second_pass = true;
     asm.rom.clear();
     asm.address = 0;
+    let mut all_defs: Vec<(String, i64)> = Vec::new();
     for (label, instruction) in &instructions {
         if let Some(l) = label {
             asm.symbols.insert(l.clone(), asm.address as i64);
+            all_defs.push((l.clone(), asm.address as i64));
         }
         encode(&mut asm, instruction);
     }
 
     fs::write(output_path, &asm.rom)?;
+
+    // Sidecar: `<output>.symbols.txt` — one line per label
+    // definition (TSV: `address<TAB>name`). EQU values are NOT
+    // included; only labels whose address derives from
+    // accumulating instruction-byte sizes. Tools that need EQUs
+    // can parse them from source directly.
+    let symbols_path = output_path.with_extension("symbols.txt");
+    let mut sym_out = String::new();
+    for (name, addr) in &all_defs {
+        sym_out.push_str(&format!("0x{:04X}\t{}\n", addr, name));
+    }
+    fs::write(&symbols_path, sym_out)?;
     Ok(())
 }
