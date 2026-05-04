@@ -38,14 +38,6 @@ struct Operand {
 struct Instruction {
     name: String,
     operands: Vec<Operand>,
-    /// Bytes captured by the disassembler in the `;@raw=...` annotation.
-    /// When present, the encoder emits these bytes verbatim instead
-    /// of computing them from `name + operands`. This is the
-    /// transitional fallback during the `;@raw=` → `;@enc=…`
-    /// migration; it will be removed entirely once every load-bearing
-    /// `;@raw=` in the source tree has been rewritten to a named
-    /// `;@enc=…` form. See `docs/raw_to_enc_migration_plan.md`.
-    raw: Option<Vec<u8>>,
     /// Encoding selector captured from a `;@enc=NAME` annotation. The
     /// encoder uses this to pick a non-canonical byte encoding when
     /// the AW VM has redundant forms (e.g. video opcode zoom-as-var
@@ -109,7 +101,6 @@ fn parse_common(name: &str, line: &str) -> Instruction {
     Instruction {
         name: name.to_owned(),
         operands,
-        raw: None,
         enc: None,
     }
 }
@@ -235,16 +226,6 @@ fn keyword_operands(instr: &Instruction) -> HashMap<String, &Operand> {
 }
 
 fn encode(asm: &mut Asm, instr: &Instruction) {
-    // Round-trip path: when the disassembler captured the original
-    // bytes (`;@raw=...`), emit them verbatim. Same semantics as the
-    // Python reference's encode() shortcut.
-    if let Some(raw) = &instr.raw {
-        for b in raw {
-            asm.write_byte(*b);
-        }
-        return;
-    }
-
     match instr.name.as_str() {
         "org" => { /* AW VM bytecode is always at 0x0000 */ }
 
@@ -593,12 +574,23 @@ fn parse_lines(input: &str) -> (HashMap<String, i64>, Vec<(Option<String>, Instr
     let mut pending_label: Option<String> = None;
 
     for src_line in input.lines() {
-        // Extract round-trip annotations BEFORE the comment-strip step
-        // swallows them. Two forms exist (mutually exclusive on a single
-        // line in practice):
-        //   `<instr>\t;@raw=0xAA,0xBB,0xCC,...`  (legacy fallback)
-        //   `<instr>\t;@enc=NAME`                (named encoding selector)
-        let raw_bytes = parse_raw_marker(src_line);
+        // `;@raw=` is no longer accepted: the migration in 2026-05-04
+        // rewrote every load-bearing `;@raw=` annotation to either a
+        // `;@enc=…` named encoding selector or a literal-operand
+        // form (see archaeology repo's `tools/resolve_raw_collisions.py`
+        // and `docs/raw_to_enc_migration_plan.md`). Surface any
+        // residual `;@raw=` as a hard parse error so the migration
+        // can't regress.
+        if src_line.contains(";@raw=") {
+            panic!(
+                "asm.rs: `;@raw=` is no longer supported (line: {:?}). \
+                 Use `;@enc=…` for named non-canonical encodings or \
+                 a literal operand value. See \
+                 archaeology/docs/raw_to_enc_migration_plan.md.",
+                src_line
+            );
+        }
+        // Extract `;@enc=NAME` BEFORE the comment-strip step swallows it.
         let enc_name = parse_enc_marker(src_line);
         let line = src_line.split(';').next().unwrap_or("").trim().to_owned();
 
@@ -632,7 +624,6 @@ fn parse_lines(input: &str) -> (HashMap<String, i64>, Vec<(Option<String>, Instr
         for name in INSTRUCTION_NAMES {
             if effective_line.trim().starts_with(name) {
                 let mut instr = parse_common(name, &effective_line);
-                instr.raw = raw_bytes.clone();
                 instr.enc = enc_name.clone();
                 output.push((pending_label.take(), instr));
                 break;
@@ -667,32 +658,6 @@ fn parse_enc_marker(line: &str) -> Option<String> {
         return None;
     }
     Some(name.to_owned())
-}
-
-/// Parse a `;@raw=0xAA,0xBB,...` marker out of one line. Returns
-/// `None` if the marker is absent.
-fn parse_raw_marker(line: &str) -> Option<Vec<u8>> {
-    const MARKER: &str = ";@raw=";
-    let idx = line.find(MARKER)?;
-    let rest = &line[idx + MARKER.len()..];
-    let rest = match rest.find(';') {
-        Some(end) => &rest[..end],
-        None => rest,
-    };
-    let mut out = Vec::new();
-    for tok in rest.split(',') {
-        let tok = tok.trim();
-        if tok.is_empty() {
-            continue;
-        }
-        let parsed = if let Some(hex) = tok.strip_prefix("0x").or_else(|| tok.strip_prefix("0X")) {
-            u8::from_str_radix(hex, 16).ok()?
-        } else {
-            tok.parse::<u8>().ok()?
-        };
-        out.push(parsed);
-    }
-    Some(out)
 }
 
 /// Assemble `input.asm` to `output.bin`. Output bytes are written
