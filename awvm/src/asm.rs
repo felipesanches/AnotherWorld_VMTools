@@ -492,21 +492,32 @@ fn encode_video(asm: &mut Asm, instr: &Instruction) {
     let x = &ops["x"];
     let y = &ops["y"];
 
-    if !ops.contains_key("zoom") {
-        // Compact form (opcode 0x80..).
-        asm.word_const(0x8000 | ((offs >> 1) & 0x7FFF));
-        asm.byte_of(&x.value);
-        asm.byte_of(&y.value);
-        return;
-    }
-
-    let zoom = &ops["zoom"];
-    let mut opcode: i64 = 0x40;
-
     let video_type = match ops.get("type") {
         Some(t) => asm.resolve_or_zero(&t.value),
         None => CINEMATIC,
     };
+
+    // Compact form (opcode 0x80..) is the cheapest encoding but has
+    // tight constraints: byte-literal x and y ≤ 0xFF, offset ≤ 0xFFFE,
+    // type=CINEMATIC, default zoom=0x40. The only way to request
+    // compact form from source is to omit `zoom=` AND have x and y
+    // both as byte literals ≤ 0xFF (and offset ≤ 0xFFFE, and
+    // type=CINEMATIC). When `zoom=` is omitted but those constraints
+    // are not met, we fall through to full form with default zoom=0x40.
+    if !ops.contains_key("zoom") {
+        let x_byte_lit = !x.is_var
+            && matches!(&x.value, OperandValue::Int(v) if *v >= 0 && *v <= 0xFF);
+        let y_byte_lit = !y.is_var
+            && matches!(&y.value, OperandValue::Int(v) if *v >= 0 && *v <= 0xFF);
+        if video_type == CINEMATIC && x_byte_lit && y_byte_lit && offs <= 0xFFFE {
+            asm.word_const(0x8000 | ((offs >> 1) & 0x7FFF));
+            asm.byte_of(&x.value);
+            asm.byte_of(&y.value);
+            return;
+        }
+    }
+
+    let mut opcode: i64 = 0x40;
     if video_type == VIDEO2 {
         opcode |= 0x03;
     }
@@ -546,23 +557,26 @@ fn encode_video(asm: &mut Asm, instr: &Instruction) {
         }
     }
 
-    if zoom.is_var {
-        operand_bytes.push(asm.resolve_or_zero(&zoom.value));
-        // Two opcode bits encode "zoom = var": bit 0 (canonical) and
-        // bit 1 (alternate). Both decode identically; the AW VM
-        // runtime treats them the same. Original (Chahi-era)
-        // bytecode mixes the two; the disassembler emits `;@enc=alt`
-        // when it sees the bit-1 form so the encoder can round-trip
-        // it byte-exactly.
-        if instr.enc.as_deref() == Some("alt") {
-            opcode |= 0x02;
+    // Zoom: if omitted in source, it's 0x40 (default — no extra
+    // bytes, no var-zoom opcode bits set). If present and a
+    // variable, encode via opcode bit 0x01 (or 0x02 for the alt
+    // encoding marked with `;@enc=alt`). If present as the literal
+    // 0x40, behaves identically to omission (kept for cases like
+    // the 92 byte-literal-x-y full-form lines where omission would
+    // be ambiguous with compact form).
+    if let Some(zoom) = ops.get("zoom") {
+        if zoom.is_var {
+            operand_bytes.push(asm.resolve_or_zero(&zoom.value));
+            if instr.enc.as_deref() == Some("alt") {
+                opcode |= 0x02;
+            } else {
+                opcode |= 0x01;
+            }
         } else {
-            opcode |= 0x01;
-        }
-    } else {
-        let zv = asm.resolve_or_zero(&zoom.value);
-        if zv != 0x40 {
-            eprintln!("ERROR! Zoom can't be a constant other than 0x40!");
+            let zv = asm.resolve_or_zero(&zoom.value);
+            if zv != 0x40 {
+                eprintln!("ERROR! Zoom can't be a constant other than 0x40!");
+            }
         }
     }
 
@@ -794,5 +808,77 @@ mod tests {
         // Full form opcode 0x40 | 0x20 (x small const) | 0x08 (y small)
         //   | 0x03 (VIDEO2) = 0x6B.
         assert_eq!(bytes[0], 0x6B);
+    }
+
+    // Default-omission of `zoom=0x40` for full-form CINEMATIC is
+    // SAFE only when compact form (opcode 0x80+) cannot encode the
+    // same call. Compact form requires byte-literal x ≤ 0xFF AND
+    // byte-literal y ≤ 0xFF AND offset ≤ 0xFFFE AND CINEMATIC type.
+    // When any of those constraints fails, omitting zoom is
+    // unambiguous; the encoder must produce full-form opcode 0x40+.
+
+    #[test]
+    fn video_full_form_var_x_omit_zoom_matches_explicit() {
+        // x is a variable → cannot be compact form. Omitting zoom=0x40
+        // must produce the same bytes as explicit zoom=0x40.
+        let with_zoom = assemble_string(
+            "\torg 0x0000\n\tvideo offset=0x100, x=[0x0e], y=20, zoom=0x40\n",
+        );
+        let without_zoom = assemble_string(
+            "\torg 0x0000\n\tvideo offset=0x100, x=[0x0e], y=20\n",
+        );
+        assert_eq!(with_zoom, without_zoom);
+        // Sanity: must NOT be compact form (opcode 0x80+).
+        assert!(with_zoom[0] < 0x80);
+    }
+
+    #[test]
+    fn video_full_form_var_y_omit_zoom_matches_explicit() {
+        let with_zoom = assemble_string(
+            "\torg 0x0000\n\tvideo offset=0x100, x=10, y=[0x0f], zoom=0x40\n",
+        );
+        let without_zoom = assemble_string(
+            "\torg 0x0000\n\tvideo offset=0x100, x=10, y=[0x0f]\n",
+        );
+        assert_eq!(with_zoom, without_zoom);
+        assert!(with_zoom[0] < 0x80);
+    }
+
+    #[test]
+    fn video_full_form_large_x_omit_zoom_matches_explicit() {
+        // x = 322 > 0xFF → cannot be compact form (compact x is byte
+        // literal only).
+        let with_zoom = assemble_string(
+            "\torg 0x0000\n\tvideo offset=0x100, x=322, y=145, zoom=0x40\n",
+        );
+        let without_zoom = assemble_string(
+            "\torg 0x0000\n\tvideo offset=0x100, x=322, y=145\n",
+        );
+        assert_eq!(with_zoom, without_zoom);
+        assert!(with_zoom[0] < 0x80);
+    }
+
+    #[test]
+    fn video_byte_literal_compact_form_picked_when_zoom_omitted() {
+        // x ≤ 0xFF AND y ≤ 0xFF AND small offset AND CINEMATIC AND
+        // no zoom in source → encoder should pick compact form
+        // (opcode 0x80+).
+        let bytes = assemble_string(
+            "\torg 0x0000\n\tvideo offset=0x100, x=10, y=20\n",
+        );
+        // Compact form uses opcode 0x80 | (offs >> 1) & 0x7F → with
+        // offs=0x100, opcode = 0x80 (offs/2 = 0x80, hi=0x00).
+        assert!(bytes[0] >= 0x80);
+    }
+
+    #[test]
+    fn video_byte_literal_full_form_when_zoom_explicit() {
+        // Same x, y as the previous test but with explicit
+        // zoom=0x40 → encoder must use full form (opcode 0x40-0x7F)
+        // to honour the request, NOT compact form.
+        let bytes = assemble_string(
+            "\torg 0x0000\n\tvideo offset=0x100, x=10, y=20, zoom=0x40\n",
+        );
+        assert!(bytes[0] >= 0x40 && bytes[0] < 0x80);
     }
 }

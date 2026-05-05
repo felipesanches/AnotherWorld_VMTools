@@ -480,6 +480,23 @@ impl<'v> AwvmDisassembler<'v> {
             } else {
                 let label =
                     self.register_cinematic_entry(&x_str, &y_str, palette, &zoom_str, offset);
+                // For full-form CINEMATIC default zoom, drop the
+                // `zoom=0x40` keyword unless compact form (opcode
+                // 0x80+) could have encoded the same x, y, offset.
+                // In the could-be-compact case we keep `zoom=0x40`
+                // explicit so the encoder round-trips to full form
+                // rather than picking the cheaper compact form.
+                let default_zoom = (opcode & 3) == 0;
+                let x_byte_lit_le_ff = (opcode & 0x20 != 0) && (opcode & 0x10 == 0);
+                let y_byte_lit_le_ff = (opcode & 0x08) != 0;
+                let offset_fits = offset <= 0xFFFE;
+                let could_be_compact = x_byte_lit_le_ff && y_byte_lit_le_ff && offset_fits;
+                if default_zoom && !could_be_compact {
+                    return format!(
+                        "video offset={}, x={}, y={}",
+                        label, x_str, y_str
+                    );
+                }
                 return format!(
                     "video offset={}, x={}, y={}, zoom={}",
                     label, x_str, y_str, zoom_str
