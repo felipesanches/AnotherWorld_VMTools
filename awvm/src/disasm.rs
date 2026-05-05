@@ -14,7 +14,6 @@ use exectrace::{Disassembler, RelocationBlock, Tracer};
 use crate::releases::ReleaseData;
 
 const VIDEO2: u32 = 0;
-const CINEMATIC: u32 = 1;
 
 const SPECIAL_PURPOSE_VARS: &[(u8, &str)] = &[
     (0x3c, "RANDOM_SEED"),
@@ -409,8 +408,8 @@ impl<'v> AwvmDisassembler<'v> {
                 offset,
             );
             return format!(
-                "video type={}, offset={}, x={}, y={}",
-                CINEMATIC, label, x, y
+                "video offset={}, x={}, y={}",
+                label, x, y
             );
         }
 
@@ -482,8 +481,8 @@ impl<'v> AwvmDisassembler<'v> {
                 let label =
                     self.register_cinematic_entry(&x_str, &y_str, palette, &zoom_str, offset);
                 return format!(
-                    "video type={}, offset={}, x={}, y={}, zoom={}",
-                    CINEMATIC, label, x_str, y_str, zoom_str
+                    "video offset={}, x={}, y={}, zoom={}",
+                    label, x_str, y_str, zoom_str
                 );
             }
         }

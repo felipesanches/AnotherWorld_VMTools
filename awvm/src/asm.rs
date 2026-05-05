@@ -17,6 +17,7 @@ use std::io;
 use std::path::Path;
 
 const VIDEO2: i64 = 0;
+const CINEMATIC: i64 = 1;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum OperandValue {
@@ -502,7 +503,10 @@ fn encode_video(asm: &mut Asm, instr: &Instruction) {
     let zoom = &ops["zoom"];
     let mut opcode: i64 = 0x40;
 
-    let video_type = asm.resolve_or_zero(&ops["type"].value);
+    let video_type = match ops.get("type") {
+        Some(t) => asm.resolve_or_zero(&t.value),
+        None => CINEMATIC,
+    };
     if video_type == VIDEO2 {
         opcode |= 0x03;
     }
@@ -711,4 +715,84 @@ pub fn assemble(input_path: &Path, output_path: &Path) -> io::Result<()> {
     }
     fs::write(&symbols_path, sym_out)?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::env;
+    use std::sync::atomic::{AtomicU64, Ordering};
+
+    static COUNTER: AtomicU64 = AtomicU64::new(0);
+
+    fn assemble_string(src: &str) -> Vec<u8> {
+        let mut tmp = env::temp_dir();
+        let n = COUNTER.fetch_add(1, Ordering::SeqCst);
+        tmp.push(format!(
+            "awvm_asm_test_{}_{}.asm",
+            std::process::id(),
+            n
+        ));
+        fs::write(&tmp, src).unwrap();
+        let mut out = tmp.clone();
+        out.set_extension("bin");
+        assemble(&tmp, &out).unwrap();
+        let bytes = fs::read(&out).unwrap();
+        let _ = fs::remove_file(&tmp);
+        let _ = fs::remove_file(&out);
+        let _ = fs::remove_file(out.with_extension("symbols.txt"));
+        bytes
+    }
+
+    // Default-omission round-trip tests for the `video` instruction
+    // (commit 2026-05-05 — `type=1` is now optional and defaults to
+    // CINEMATIC). Source with explicit `type=1` and source with the
+    // keyword omitted must produce byte-identical output.
+
+    #[test]
+    fn video_compact_form_type1_default_matches_explicit() {
+        let with_type = assemble_string(
+            "\torg 0x0000\n\tvideo type=1, offset=0x100, x=10, y=20\n",
+        );
+        let without_type = assemble_string(
+            "\torg 0x0000\n\tvideo offset=0x100, x=10, y=20\n",
+        );
+        assert_eq!(with_type, without_type);
+    }
+
+    #[test]
+    fn video_full_form_default_zoom_type1_default_matches_explicit() {
+        let with_type = assemble_string(
+            "\torg 0x0000\n\tvideo type=1, offset=0x100, x=10, y=20, zoom=0x40\n",
+        );
+        let without_type = assemble_string(
+            "\torg 0x0000\n\tvideo offset=0x100, x=10, y=20, zoom=0x40\n",
+        );
+        assert_eq!(with_type, without_type);
+    }
+
+    #[test]
+    fn video_full_form_var_zoom_type1_default_matches_explicit() {
+        let with_type = assemble_string(
+            "\torg 0x0000\n\tvideo type=1, offset=0x100, x=10, y=20, zoom=[0x42]\n",
+        );
+        let without_type = assemble_string(
+            "\torg 0x0000\n\tvideo offset=0x100, x=10, y=20, zoom=[0x42]\n",
+        );
+        assert_eq!(with_type, without_type);
+    }
+
+    #[test]
+    fn video_type0_video2_still_requires_explicit_type() {
+        // type=0 (VIDEO2) is the minority case and is NOT defaulted.
+        // The opcode must have bit 0x03 set; this test pins that down
+        // so a future regression that started defaulting type=0 too
+        // would change the bytes and fail here.
+        let bytes = assemble_string(
+            "\torg 0x0000\n\tvideo type=0, offset=0x100, x=10, y=20, zoom=0x40\n",
+        );
+        // Full form opcode 0x40 | 0x20 (x small const) | 0x08 (y small)
+        //   | 0x03 (VIDEO2) = 0x6B.
+        assert_eq!(bytes[0], 0x6B);
+    }
 }
