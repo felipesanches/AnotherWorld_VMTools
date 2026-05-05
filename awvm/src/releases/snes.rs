@@ -437,6 +437,13 @@ pub const LABELED_CINEMATIC_ENTRIES_OVERRIDE: &[(u32, &[(u32, &str)])] = &[
     ]),
 ];
 
+/// Per-stage variable-name aliases. See msdos.rs for the rationale.
+/// On snes only Lake=0 and Prison=1 are currently disassembled.
+pub const STAGE_SPECIFIC_VARS: &[(u32, &[(u8, &str)])] = &[
+    (0, &[(0x01, "HERO_X"), (0x02, "HERO_Y")]),
+    (1, &[(0x01, "HERO_X"), (0x02, "HERO_Y")]),
+];
+
 /// Bundled per-release tables. Used by the disassembler and
 /// release dispatch in the CLI.
 pub const RELEASE_DATA: crate::releases::ReleaseData = crate::releases::ReleaseData {
@@ -445,5 +452,6 @@ pub const RELEASE_DATA: crate::releases::ReleaseData = crate::releases::ReleaseD
     known_labels: KNOWN_LABELS,
     possibly_unused_codeblocks: POSSIBLY_UNUSED_CODEBLOCKS,
     labeled_cinematic_entries: LABELED_CINEMATIC_ENTRIES_OVERRIDE,
+    stage_specific_vars: STAGE_SPECIFIC_VARS,
     resource_ids: crate::romset::ResourceIds { bytecode: &[], cinematic: &[], palette: &[], video2: &[] },
 };

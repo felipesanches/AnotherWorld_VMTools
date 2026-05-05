@@ -529,6 +529,16 @@ pub mod resource_ids {
     pub const VIDEO2: &[u8] = &[0x11];
 }
 
+/// Per-stage variable-name aliases. See msdos.rs for the rationale.
+/// Stage indices match STAGE_TITLES order: Lake=2, Prison=3,
+/// Caves=4, Capsule=6.
+pub const STAGE_SPECIFIC_VARS: &[(u32, &[(u8, &str)])] = &[
+    (2, &[(0x01, "HERO_X"), (0x02, "HERO_Y")]),
+    (3, &[(0x01, "HERO_X"), (0x02, "HERO_Y")]),
+    (4, &[(0x01, "HERO_X"), (0x02, "HERO_Y")]),
+    (6, &[(0x01, "HERO_X"), (0x02, "HERO_Y")]),
+];
+
 /// Bundled per-release tables. Used by the disassembler and
 /// release dispatch in the CLI.
 pub const RELEASE_DATA: crate::releases::ReleaseData = crate::releases::ReleaseData {
@@ -537,6 +547,7 @@ pub const RELEASE_DATA: crate::releases::ReleaseData = crate::releases::ReleaseD
     known_labels: KNOWN_LABELS,
     possibly_unused_codeblocks: POSSIBLY_UNUSED_CODEBLOCKS,
     labeled_cinematic_entries: LABELED_CINEMATIC_ENTRIES_OVERRIDE,
+    stage_specific_vars: STAGE_SPECIFIC_VARS,
     resource_ids: crate::romset::ResourceIds {
         bytecode: resource_ids::BYTECODE,
         cinematic: resource_ids::CINEMATIC,

@@ -535,6 +535,21 @@ pub mod resource_ids {
     pub const VIDEO2: &[u8] = &[0x11];
 }
 
+/// Per-stage variable-name aliases for general-purpose vars whose
+/// role is well-known and stage-stable. Stages 2/3/4/6 are the
+/// playable-walking stages (Lake, Prison, Caves, Capsule) where
+/// var 0x01 is the hero's screen-X and var 0x02 is the hero's
+/// screen-Y by bytecode convention. Other stages (Code-wheel,
+/// Intro, Tank, Ending, Passcode) use these vars for unrelated
+/// purposes (loop counters, scratch coords, codewheel-rotation
+/// indices) so they intentionally do NOT get the alias.
+pub const STAGE_SPECIFIC_VARS: &[(u32, &[(u8, &str)])] = &[
+    (2, &[(0x01, "HERO_X"), (0x02, "HERO_Y")]),
+    (3, &[(0x01, "HERO_X"), (0x02, "HERO_Y")]),
+    (4, &[(0x01, "HERO_X"), (0x02, "HERO_Y")]),
+    (6, &[(0x01, "HERO_X"), (0x02, "HERO_Y")]),
+];
+
 /// Bundled per-release tables. Used by the disassembler and
 /// release dispatch in the CLI.
 pub const RELEASE_DATA: crate::releases::ReleaseData = crate::releases::ReleaseData {
@@ -543,6 +558,7 @@ pub const RELEASE_DATA: crate::releases::ReleaseData = crate::releases::ReleaseD
     known_labels: KNOWN_LABELS,
     possibly_unused_codeblocks: POSSIBLY_UNUSED_CODEBLOCKS,
     labeled_cinematic_entries: LABELED_CINEMATIC_ENTRIES_OVERRIDE,
+    stage_specific_vars: STAGE_SPECIFIC_VARS,
     resource_ids: crate::romset::ResourceIds {
         bytecode: resource_ids::BYTECODE,
         cinematic: resource_ids::CINEMATIC,

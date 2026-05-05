@@ -16,6 +16,19 @@ pub struct ReleaseData {
     pub known_labels: &'static [(u32, &'static [(u32, &'static str)])],
     pub possibly_unused_codeblocks: &'static [(u32, &'static [u32])],
     pub labeled_cinematic_entries: &'static [(u32, &'static [(u32, &'static str)])],
+    /// Per-stage variable-name aliases for general-purpose vars
+    /// (0x00..0xDF) that are conventionally used for one specific
+    /// role in a specific stage. The disassembler emits the alias
+    /// instead of `[0xNN]` when looking at the listed stage, and
+    /// also emits an `<NAME> EQU 0x<NN>` declaration in the listing
+    /// header so the assembler can round-trip the source. Engine-
+    /// managed special-purpose vars (0xE0..0xFF and a handful at
+    /// 0x3C/0x54/0x67/0xDA/0xDC) are stage-invariant and live in
+    /// `disasm::SPECIAL_PURPOSE_VARS` instead.
+    ///
+    /// Outer key: stage index (matches `stage_titles` order).
+    /// Inner pairs: `(var_id, alias_name)`.
+    pub stage_specific_vars: &'static [(u32, &'static [(u8, &'static str)])],
     pub resource_ids: crate::romset::ResourceIds<'static>,
 }
 
