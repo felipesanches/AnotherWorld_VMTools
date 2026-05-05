@@ -440,8 +440,11 @@ pub const LABELED_CINEMATIC_ENTRIES_OVERRIDE: &[(u32, &[(u32, &str)])] = &[
 /// Per-stage variable-name aliases. See msdos.rs for the rationale.
 /// On snes only Lake=0 and Prison=1 are currently disassembled.
 pub const STAGE_SPECIFIC_VARS: &[(u32, &[(u8, &str)])] = &[
-    (0, &[(0x01, "HERO_X"), (0x02, "HERO_Y")]),
-    (1, &[(0x01, "HERO_X"), (0x02, "HERO_Y")]),
+    (0, &[(0x01, "HERO_X"), (0x02, "HERO_Y"), (0x10, "COUNTER")]),
+    (1, &[
+        (0x01, "HERO_X"), (0x02, "HERO_Y"),
+        (0x07, "BUDDY_X"), (0x08, "BUDDY_Y"),
+    ]),
 ];
 
 /// Bundled per-release tables. Used by the disassembler and

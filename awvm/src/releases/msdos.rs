@@ -561,10 +561,32 @@ pub mod resource_ids {
 /// purposes (loop counters, scratch coords, codewheel-rotation
 /// indices) so they intentionally do NOT get the alias.
 pub const STAGE_SPECIFIC_VARS: &[(u32, &[(u8, &str)])] = &[
-    (2, &[(0x01, "HERO_X"), (0x02, "HERO_Y")]),
-    (3, &[(0x01, "HERO_X"), (0x02, "HERO_Y")]),
+    // Stage 2 (Lake). HERO_X/Y are Lester's screen coords.
+    // COUNTER is var 0x10 — a djnz iteration counter (heavily used
+    // in LAKE for animation hold-loops); the same var is reused as
+    // generic scratch in PRISON/CAVES/CAPSULE so it intentionally
+    // does NOT get a stage-specific alias there.
+    (2, &[(0x01, "HERO_X"), (0x02, "HERO_Y"), (0x10, "COUNTER")]),
+    // Stage 3 (Prison). BUDDY_X/Y are vars 0x07/0x08 holding the
+    // cellmate's screen coords (the only co-protagonist in PRISON
+    // and the dispatcher for `DRAW_CIN_157/158/.../171` etc.).
+    (3, &[
+        (0x01, "HERO_X"), (0x02, "HERO_Y"),
+        (0x07, "BUDDY_X"), (0x08, "BUDDY_Y"),
+    ]),
+    // Stage 4 (Caves). HERO_X/Y only — the secondary creature
+    // drawn at (0x07, 0x08) in CAVES is currently unidentified
+    // (CIN_015..039 silhouettes don't match a known character),
+    // so no BUDDY alias here yet.
     (4, &[(0x01, "HERO_X"), (0x02, "HERO_Y")]),
-    (6, &[(0x01, "HERO_X"), (0x02, "HERO_Y")]),
+    // Stage 6 (Capsule). BUDDY_X/Y are vars 0x07/0x08 holding the
+    // alien friend's screen coords (drives the BUDDY_PULLS_LESTER
+    // sequence as well as the rest of the alien's CAPSULE
+    // animations).
+    (6, &[
+        (0x01, "HERO_X"), (0x02, "HERO_Y"),
+        (0x07, "BUDDY_X"), (0x08, "BUDDY_Y"),
+    ]),
 ];
 
 /// Bundled per-release tables. Used by the disassembler and
