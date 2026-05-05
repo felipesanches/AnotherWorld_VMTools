@@ -517,6 +517,18 @@ pub const LABELED_CINEMATIC_ENTRIES_OVERRIDE: &[(u32, &[(u32, &str)])] = &[
         (0xF04A, "VIDEO_MASK_FOR_SNEAKY_TENTACLE_ANIMATION"),
         (0xF1C2, "SCENARIO_1ST_SCREEN_TO_THE_RIGHT_10"),
     ]),
+    // Stage 6 (Capsule). Same scene as msdos's BUDDY_PULLS_LESTER_*
+    // sequence; amiga uses different polygon-bank offsets per the
+    // 1991→1992 renumbering documented in archaeology issue #0080.
+    (6, &[
+        (0xB662, "BUDDY_PULLS_LESTER_0"),
+        (0xB6CE, "BUDDY_PULLS_LESTER_1"),
+        (0xB6FA, "BUDDY_PULLS_LESTER_2"),
+        (0xB726, "BUDDY_PULLS_LESTER_3"),
+        (0xB776, "BUDDY_PULLS_LESTER_4"),
+        (0xB78E, "BUDDY_PULLS_LESTER_5"),
+        (0xB7BE, "BUDDY_PULLS_LESTER_6"),
+    ]),
 ];
 
 pub mod resource_ids {

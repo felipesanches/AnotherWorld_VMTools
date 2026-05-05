@@ -523,6 +523,23 @@ pub const LABELED_CINEMATIC_ENTRIES_OVERRIDE: &[(u32, &[(u32, &str)])] = &[
         (0xDC3A, "VIDEO_MASK_FOR_SNEAKY_TENTACLE_ANIMATION"),
         (0xDDB2, "SCENARIO_1ST_SCREEN_TO_THE_RIGHT_10"),
     ]),
+    // Stage 6 (Capsule). The seven frames below are the alien
+    // friend ("buddy") pulling Lester up out of the hole he fell
+    // into at the start of the level. Identified by Felipe via
+    // visual inspection of the rendered polygons (2026-05-05).
+    // The buddy's screen position is set just above the playback
+    // by `INIT_VARS_E6_07_08:` (mov [0x07], 0x7B; mov [0x08], 0xAC),
+    // i.e. (123, 172) — see the `LABEL_0385:` djnz hold above the
+    // first frame draw.
+    (6, &[
+        (0xF6C4, "BUDDY_PULLS_LESTER_0"),
+        (0xF758, "BUDDY_PULLS_LESTER_1"),
+        (0xF7C6, "BUDDY_PULLS_LESTER_2"),
+        (0xF7FA, "BUDDY_PULLS_LESTER_3"),
+        (0xF82A, "BUDDY_PULLS_LESTER_4"),
+        (0xF856, "BUDDY_PULLS_LESTER_5"),
+        (0xF882, "BUDDY_PULLS_LESTER_6"),
+    ]),
 ];
 
 pub mod resource_ids {
