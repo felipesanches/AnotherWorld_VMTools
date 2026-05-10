@@ -238,6 +238,24 @@ fn emit_port_rs(port: &str, root: &Value) -> String {
                 port_upper, stage.idx
             ));
         }
+        if let Some(cohorts) = &stage.translation_to_parent {
+            s.push_str(&format!(
+                "static {}_STAGE_{}_COHORTS: &[crate::registry::TranslationCohort] = &[\n",
+                port_upper, stage.idx
+            ));
+            for c in cohorts {
+                let kind_expr = match c.kind.as_str() {
+                    "shift" => format!("crate::registry::CohortKind::Shift({})", c.delta),
+                    "no_parent" => "crate::registry::CohortKind::NoParent".to_owned(),
+                    other => panic!("unknown cohort kind {other:?}"),
+                };
+                s.push_str(&format!(
+                    "    crate::registry::TranslationCohort {{ start: 0x{:04X}, end: 0x{:04X}, kind: {} }},\n",
+                    c.start, c.end, kind_expr,
+                ));
+            }
+            s.push_str("];\n");
+        }
     }
     s.push_str("\n");
 
@@ -265,6 +283,11 @@ fn emit_port_rs(port: &str, root: &Value) -> String {
         } else {
             "&[]".to_owned()
         };
+        let cohorts_ref = if stage.translation_to_parent.is_some() {
+            format!("{}_STAGE_{}_COHORTS", port_upper, stage.idx)
+        } else {
+            "&[]".to_owned()
+        };
         s.push_str(&format!(
             "    crate::registry::StageRegistry {{\n\
              \x20       stage_idx: {idx},\n\
@@ -276,7 +299,7 @@ fn emit_port_rs(port: &str, root: &Value) -> String {
              \x20       cinematic_entries: {cin_ref},\n\
              \x20       possibly_unused_codeblocks: {unused_ref},\n\
              \x20       variable_aliases: {aliases_ref},\n\
-             \x20       translation_to_parent: &[],\n\
+             \x20       translation_to_parent: {cohorts_ref},\n\
              \x20   }},\n",
             idx = stage.idx,
         ));
@@ -320,6 +343,16 @@ struct StageData {
     cinematic_entries: Option<Vec<(u32, String)>>,
     possibly_unused_codeblocks: Option<Vec<u32>>,
     variable_aliases: Option<Vec<(u8, String)>>,
+    /// Sibling-port translation cohorts (Phase 2). For canonical
+    /// ports this is None / empty.
+    translation_to_parent: Option<Vec<CohortData>>,
+}
+
+struct CohortData {
+    start: u32,
+    end: u32,
+    kind: String, // "shift" or "no_parent"
+    delta: i32, // 0 if no_parent
 }
 
 fn collect_stages(root: &Value) -> Vec<StageData> {
@@ -357,6 +390,25 @@ fn collect_stages(root: &Value) -> Vec<StageData> {
                         let var = a[0].as_integer().unwrap() as u8;
                         let name = a[1].as_str().unwrap().to_owned();
                         (var, name)
+                    })
+                    .collect(),
+            );
+        }
+        if let Some(cohorts) = t.get("translation_to_parent").and_then(Value::as_array) {
+            s.translation_to_parent = Some(
+                cohorts
+                    .iter()
+                    .map(|v| {
+                        let table = v.as_table().unwrap();
+                        let start = table.get("start").and_then(Value::as_integer).unwrap() as u32;
+                        let end = table.get("end").and_then(Value::as_integer).unwrap() as u32;
+                        let kind = table.get("kind").and_then(Value::as_str).unwrap().to_owned();
+                        let delta = table
+                            .get("delta")
+                            .and_then(Value::as_integer)
+                            .map(|i| i as i32)
+                            .unwrap_or(0);
+                        CohortData { start, end, kind, delta }
                     })
                     .collect(),
             );

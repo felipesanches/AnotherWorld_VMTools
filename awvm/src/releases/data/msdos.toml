@@ -40,6 +40,15 @@ video2 = [0x11]
 [[stages]]
 idx = 0
 possibly_unused_codeblocks = [0x007B, 0x0D1E, 0x109E]
+translation_to_parent = [
+    { start = 0x0015, end = 0x0016, kind = "shift", delta = 0 },
+    { start = 0x00F6, end = 0x00F7, kind = "shift", delta = -22 },
+    { start = 0x01AD, end = 0x02CF, kind = "shift", delta = -52 },
+    { start = 0x07F4, end = 0x0A16, kind = "shift", delta = -503 },
+    { start = 0x0D41, end = 0x0D42, kind = "shift", delta = -634 },
+    { start = 0x0E64, end = 0x0E69, kind = "shift", delta = -648 },
+    { start = 0x10D0, end = 0x10D1, kind = "shift", delta = -778 },
+]
 
 [[stages]]
 idx = 1
@@ -113,6 +122,27 @@ cinematic_entries = [
     [0xF906, "DNA_16"],
 ]
 possibly_unused_codeblocks = [0x00D2, 0x1527, 0x154E, 0x1BD6]
+translation_to_parent = [
+    { start = 0x007E, end = 0x007F, kind = "shift", delta = -4 },
+    { start = 0x00E7, end = 0x00E8, kind = "shift", delta = -70 },
+    { start = 0x0290, end = 0x0291, kind = "shift", delta = -116 },
+    { start = 0x037F, end = 0x0394, kind = "shift", delta = -124 },
+    { start = 0x0405, end = 0x05C1, kind = "shift", delta = -128 },
+    { start = 0x0A50, end = 0x0DC6, kind = "shift", delta = -159 },
+    { start = 0x0FFB, end = 0x0FFC, kind = "shift", delta = -162 },
+    { start = 0x103C, end = 0x103D, kind = "shift", delta = -166 },
+    { start = 0x13ED, end = 0x1403, kind = "shift", delta = -228 },
+    { start = 0x1468, end = 0x1469, kind = "shift", delta = -232 },
+    { start = 0x157C, end = 0x16CD, kind = "shift", delta = -245 },
+    { start = 0x1783, end = 0x1784, kind = "shift", delta = -249 },
+    { start = 0x1939, end = 0x198C, kind = "shift", delta = -273 },
+    { start = 0x1BE2, end = 0x1BE3, kind = "shift", delta = -285 },
+    { start = 0x1C7E, end = 0x1CD5, kind = "shift", delta = -293 },
+    { start = 0x1D9B, end = 0x1DFC, kind = "shift", delta = -297 },
+    { start = 0x2002, end = 0x2004, kind = "shift", delta = -309 },
+    { start = 0x2173, end = 0x23B2, kind = "shift", delta = -327 },
+    { start = 0x268E, end = 0x268F, kind = "shift", delta = -351 },
+]
 
 [[stages]]
 idx = 2
@@ -527,6 +557,22 @@ variable_aliases = [
     [0x02, "HERO_Y"],
     [0x10, "COUNTER"],
 ]
+translation_to_parent = [
+    { start = 0x0099, end = 0x009A, kind = "shift", delta = -9 },
+    { start = 0x01BC, end = 0x03D9, kind = "shift", delta = -66 },
+    { start = 0x04DF, end = 0x0D21, kind = "shift", delta = -70 },
+    { start = 0x1128, end = 0x1357, kind = "shift", delta = -85 },
+    { start = 0x1569, end = 0x156A, kind = "shift", delta = -98 },
+    { start = 0x1890, end = 0x1976, kind = "shift", delta = -96 },
+    { start = 0x1AF4, end = 0x1AF5, kind = "shift", delta = -108 },
+    { start = 0x1DAC, end = 0x1EB1, kind = "shift", delta = -227 },
+    { start = 0x1F88, end = 0x2686, kind = "shift", delta = -244 },
+    { start = 0x2789, end = 0x292E, kind = "shift", delta = -263 },
+    { start = 0x2F23, end = 0x4024, kind = "shift", delta = -330 },
+    { start = 0x40A5, end = 0x4115, kind = "shift", delta = -337 },
+    { start = 0x41E9, end = 0x4272, kind = "shift", delta = -404 },
+    { start = 0x510E, end = 0x510F, kind = "shift", delta = -1695 },
+]
 
 [[stages]]
 idx = 3
@@ -536,6 +582,35 @@ variable_aliases = [
     [0x02, "HERO_Y"],
     [0x07, "BUDDY_X"],
     [0x08, "BUDDY_Y"],
+]
+translation_to_parent = [
+    { start = 0x009E, end = 0x009F, kind = "shift", delta = 0 },
+    { start = 0x0120, end = 0x01A2, kind = "shift", delta = -34 },
+    { start = 0x04DF, end = 0x0660, kind = "shift", delta = 58 },
+    { start = 0x071A, end = 0x0790, kind = "shift", delta = 36 },
+    { start = 0x0967, end = 0x0FCE, kind = "shift", delta = 32 },
+    { start = 0x115F, end = 0x1F50, kind = "shift", delta = 8 },
+    { start = 0x2A0A, end = 0x2A10, kind = "shift", delta = -52 },
+    { start = 0x2CE5, end = 0x2F95, kind = "shift", delta = -62 },
+    { start = 0x31CB, end = 0x320F, kind = "shift", delta = -77 },
+    { start = 0x32D1, end = 0x431C, kind = "shift", delta = -98 },
+    { start = 0x46A0, end = 0x4C9D, kind = "shift", delta = -161 },
+    { start = 0x4CCF, end = 0x4CE9, kind = "shift", delta = -165 },
+    { start = 0x4DA5, end = 0x509E, kind = "shift", delta = -169 },
+    { start = 0x51A8, end = 0x7397, kind = "shift", delta = -173 },
+    { start = 0x746C, end = 0x746D, kind = "shift", delta = 94 },
+    { start = 0x7498, end = 0x7631, kind = "shift", delta = -173 },
+    { start = 0x774E, end = 0x78D9, kind = "shift", delta = -177 },
+    { start = 0x7BB6, end = 0x7F4D, kind = "shift", delta = -203 },
+    { start = 0x7F94, end = 0x8061, kind = "shift", delta = -210 },
+    { start = 0x8225, end = 0x8226, kind = "shift", delta = -223 },
+    { start = 0x8673, end = 0x86B1, kind = "shift", delta = -261 },
+    { start = 0x8784, end = 0x8820, kind = "shift", delta = -265 },
+    { start = 0x8A25, end = 0x8A62, kind = "shift", delta = -291 },
+    { start = 0x8AD1, end = 0x8F84, kind = "shift", delta = -358 },
+    { start = 0x911A, end = 0x911B, kind = "shift", delta = -454 },
+    { start = 0x94C2, end = 0x94C3, kind = "shift", delta = -558 },
+    { start = 0x98CD, end = 0x990C, kind = "shift", delta = -602 },
 ]
 
 [[stages]]
@@ -548,10 +623,61 @@ variable_aliases = [
     [0x01, "HERO_X"],
     [0x02, "HERO_Y"],
 ]
+translation_to_parent = [
+    { start = 0x00CD, end = 0x00F3, kind = "shift", delta = -13 },
+    { start = 0x02AF, end = 0x066A, kind = "shift", delta = -25 },
+    { start = 0x071E, end = 0x1157, kind = "shift", delta = -33 },
+    { start = 0x157D, end = 0x1952, kind = "shift", delta = -448 },
+    { start = 0x1BC3, end = 0x1BED, kind = "shift", delta = -458 },
+    { start = 0x1DD3, end = 0x290C, kind = "shift", delta = -452 },
+    { start = 0x2B03, end = 0x2B88, kind = "shift", delta = -513 },
+    { start = 0x2C62, end = 0x2F4B, kind = "shift", delta = -547 },
+    { start = 0x33EB, end = 0x3F49, kind = "shift", delta = -553 },
+    { start = 0x3FFA, end = 0x3FFB, kind = "shift", delta = -578 },
+    { start = 0x4235, end = 0x4373, kind = "shift", delta = -773 },
+    { start = 0x4488, end = 0x4496, kind = "shift", delta = -781 },
+    { start = 0x44BB, end = 0x4BC6, kind = "shift", delta = -785 },
+    { start = 0x4E2B, end = 0x6807, kind = "shift", delta = -803 },
+    { start = 0x696E, end = 0x73C2, kind = "shift", delta = -794 },
+    { start = 0x7712, end = 0x7B13, kind = "shift", delta = -856 },
+    { start = 0x7C0B, end = 0xA213, kind = "shift", delta = -862 },
+    { start = 0xA262, end = 0xA263, kind = "shift", delta = -869 },
+    { start = 0xB223, end = 0xBFDE, kind = "shift", delta = -1043 },
+    { start = 0xC047, end = 0xC0B8, kind = "shift", delta = -1099 },
+    { start = 0xC10A, end = 0xC52F, kind = "shift", delta = -1103 },
+    { start = 0xC80B, end = 0xC87D, kind = "shift", delta = -1107 },
+    { start = 0xCA41, end = 0xCA42, kind = "shift", delta = -1168 },
+    { start = 0xCC00, end = 0xCDBC, kind = "shift", delta = -1190 },
+    { start = 0xD213, end = 0xD251, kind = "shift", delta = -1196 },
+    { start = 0xD268, end = 0xD3E4, kind = "shift", delta = -1206 },
+    { start = 0xD42D, end = 0xD524, kind = "shift", delta = -1211 },
+    { start = 0xD737, end = 0xD9EC, kind = "shift", delta = -1248 },
+    { start = 0xDBB9, end = 0xDC48, kind = "shift", delta = -1260 },
+    { start = 0xDC93, end = 0xDC94, kind = "shift", delta = -1268 },
+    { start = 0xDD59, end = 0xDDA4, kind = "shift", delta = -1300 },
+    { start = 0xE2AE, end = 0xE2D9, kind = "shift", delta = -1360 },
+    { start = 0xE4F5, end = 0xE664, kind = "shift", delta = -1427 },
+    { start = 0xE997, end = 0xE998, kind = "shift", delta = -1415 },
+    { start = 0xEB2B, end = 0xEB2C, kind = "shift", delta = -1515 },
+    { start = 0xEF37, end = 0xEF38, kind = "shift", delta = -1625 },
+    { start = 0xF3D1, end = 0xF4CF, kind = "shift", delta = -1661 },
+]
 
 [[stages]]
 idx = 5
 possibly_unused_codeblocks = [0x0405, 0x0A27, 0x0DCC, 0x13D9, 0x1868, 0x1903, 0x1DE7, 0x201A]
+translation_to_parent = [
+    { start = 0x00BC, end = 0x0467, kind = "shift", delta = -18 },
+    { start = 0x0A32, end = 0x0A68, kind = "shift", delta = -966 },
+    { start = 0x0BF6, end = 0x0BF7, kind = "shift", delta = -1031 },
+    { start = 0x1131, end = 0x1298, kind = "shift", delta = -1246 },
+    { start = 0x1323, end = 0x17B6, kind = "shift", delta = -1282 },
+    { start = 0x1B32, end = 0x1C68, kind = "shift", delta = -1286 },
+    { start = 0x1CB4, end = 0x1CB5, kind = "shift", delta = -1292 },
+    { start = 0x1D12, end = 0x1D46, kind = "shift", delta = -1352 },
+    { start = 0x1D77, end = 0x1E40, kind = "shift", delta = -1358 },
+    { start = 0x1F30, end = 0x205F, kind = "shift", delta = -1375 },
+]
 
 [[stages]]
 idx = 6
@@ -571,6 +697,65 @@ variable_aliases = [
     [0x07, "BUDDY_X"],
     [0x08, "BUDDY_Y"],
 ]
+translation_to_parent = [
+    { start = 0x017D, end = 0x017E, kind = "shift", delta = 15438 },
+    { start = 0x0BD3, end = 0x0BD4, kind = "shift", delta = -628 },
+    { start = 0x11AA, end = 0x1393, kind = "shift", delta = -4205 },
+    { start = 0x175B, end = 0x1DC2, kind = "shift", delta = -4014 },
+    { start = 0x1EDF, end = 0x1EE0, kind = "shift", delta = -4043 },
+    { start = 0x2172, end = 0x242A, kind = "shift", delta = -4487 },
+    { start = 0x26FC, end = 0x2897, kind = "shift", delta = -4291 },
+    { start = 0x2A3E, end = 0x2A3F, kind = "shift", delta = -4643 },
+    { start = 0x2E27, end = 0x2E28, kind = "shift", delta = -3176 },
+    { start = 0x3041, end = 0x30B7, kind = "shift", delta = -3367 },
+    { start = 0x3EC9, end = 0x3ECA, kind = "shift", delta = -5462 },
+    { start = 0x428F, end = 0x4290, kind = "shift", delta = -5552 },
+    { start = 0x456E, end = 0x456F, kind = "shift", delta = -5584 },
+    { start = 0x4F8A, end = 0x4F90, kind = "shift", delta = -5667 },
+    { start = 0x5387, end = 0x53DB, kind = "shift", delta = -5745 },
+    { start = 0x55CC, end = 0x5705, kind = "shift", delta = -5906 },
+    { start = 0x59DF, end = 0x59E4, kind = "shift", delta = -5967 },
+    { start = 0x5A7F, end = 0x5B4F, kind = "shift", delta = -5973 },
+    { start = 0x5DF6, end = 0x5DF7, kind = "shift", delta = -5981 },
+    { start = 0x5F53, end = 0x64E3, kind = "shift", delta = -5994 },
+    { start = 0x6548, end = 0x6617, kind = "shift", delta = -5998 },
+    { start = 0x68A6, end = 0x69AB, kind = "shift", delta = -6002 },
+    { start = 0x6C10, end = 0x6C11, kind = "shift", delta = -6067 },
+    { start = 0x6D03, end = 0x6EEF, kind = "shift", delta = -6095 },
+    { start = 0x7171, end = 0x7172, kind = "shift", delta = -6093 },
+    { start = 0x7316, end = 0x7317, kind = "shift", delta = -6180 },
+    { start = 0x7418, end = 0x742B, kind = "shift", delta = -6227 },
+    { start = 0x748D, end = 0x748E, kind = "shift", delta = -6239 },
+    { start = 0x76E9, end = 0x770E, kind = "shift", delta = -6245 },
+    { start = 0x7713, end = 0x7714, kind = "shift", delta = -6281 },
+    { start = 0x7719, end = 0x7AA5, kind = "shift", delta = -6251 },
+    { start = 0x7B84, end = 0x7B85, kind = "shift", delta = -6257 },
+    { start = 0x7F36, end = 0x7F37, kind = "shift", delta = -6379 },
+    { start = 0x7FDC, end = 0x7FDD, kind = "shift", delta = -6385 },
+    { start = 0x82DF, end = 0x82E0, kind = "shift", delta = -6391 },
+    { start = 0x830E, end = 0x830F, kind = "shift", delta = -6397 },
+    { start = 0x83E5, end = 0x8445, kind = "shift", delta = -6403 },
+    { start = 0x84D2, end = 0x84E5, kind = "shift", delta = -6409 },
+    { start = 0x84F6, end = 0x8562, kind = "shift", delta = -6415 },
+    { start = 0x8CF6, end = 0x9708, kind = "shift", delta = -6487 },
+    { start = 0x9770, end = 0x9771, kind = "shift", delta = -6484 },
+    { start = 0x977F, end = 0x9780, kind = "shift", delta = -6481 },
+    { start = 0x99DB, end = 0x9A19, kind = "shift", delta = -7004 },
+    { start = 0x9C34, end = 0x9C3F, kind = "shift", delta = -7472 },
+    { start = 0x9C3E, end = 0xA413, kind = "no_parent" },
+    { start = 0x9DC3, end = 0x9DC4, kind = "shift", delta = -7817 },
+    { start = 0x9DF3, end = 0x9DF4, kind = "shift", delta = -7845 },
+    { start = 0x9E1F, end = 0x9E20, kind = "shift", delta = -7865 },
+    { start = 0xB1FE, end = 0xB251, kind = "shift", delta = -11646 },
+    { start = 0xB404, end = 0xB408, kind = "shift", delta = -11893 },
+    { start = 0xB4A9, end = 0xB4AA, kind = "shift", delta = -11995 },
+    { start = 0xB4F8, end = 0xB4F9, kind = "shift", delta = -11987 },
+    { start = 0xB536, end = 0xB537, kind = "shift", delta = -11981 },
+    { start = 0xB642, end = 0xB661, kind = "shift", delta = -12043 },
+    { start = 0xB6D0, end = 0xBB7F, kind = "shift", delta = -11108 },
+    { start = 0xBD12, end = 0xBD13, kind = "shift", delta = -11208 },
+    { start = 0xC623, end = 0xC624, kind = "shift", delta = -11348 },
+]
 
 [[stages]]
 idx = 7
@@ -578,6 +763,11 @@ labels = [
     [0x0025, "LIKELY_A_COPY_PROTECTION_MECHANISM"],
 ]
 possibly_unused_codeblocks = [0x0939, 0x0AD7]
+translation_to_parent = [
+    { start = 0x002D, end = 0x0221, kind = "shift", delta = 0 },
+    { start = 0x044B, end = 0x0A7B, kind = "shift", delta = -266 },
+    { start = 0x0B35, end = 0x0B45, kind = "shift", delta = -338 },
+]
 
 [[stages]]
 idx = 8
@@ -585,4 +775,9 @@ labels = [
     [0x0179, "LIKELY_A_COPY_PROTECTION_MECHANISM"],
 ]
 possibly_unused_codeblocks = [0x014F, 0x029D, 0x03D4, 0x03E1, 0x064E, 0x06C1, 0x0733, 0x1078, 0x1088]
-
+translation_to_parent = [
+    { start = 0x05F6, end = 0x05F7, kind = "shift", delta = -26 },
+    { start = 0x0A93, end = 0x0A94, kind = "shift", delta = -235 },
+    { start = 0x0BC5, end = 0x0BC6, kind = "shift", delta = -311 },
+    { start = 0x1090, end = 0x10A0, kind = "shift", delta = -987 },
+]
