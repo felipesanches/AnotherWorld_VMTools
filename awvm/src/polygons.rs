@@ -357,6 +357,11 @@ fn write_svg(path: &Path, paths: &[SvgPath]) -> io::Result<()> {
         f,
         r#"<svg xmlns="http://www.w3.org/2000/svg" width="320" height="200" viewBox="0 0 320 200">"#
     )?;
+    // Neutral light-grey backdrop so polygons whose fill happens to
+    // be black (or close to the rendering host's default black bg)
+    // remain visible. Doesn't affect fidelity — the polygon fill
+    // colors come from the palette unchanged.
+    writeln!(f, r##"  <rect width="320" height="200" fill="#888888"/>"##)?;
     for p in paths {
         if p.points.is_empty() {
             continue;
