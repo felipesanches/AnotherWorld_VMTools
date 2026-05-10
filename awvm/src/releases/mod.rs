@@ -48,3 +48,20 @@ pub fn by_slug(slug: &str) -> Option<&'static ReleaseData> {
         _ => None,
     }
 }
+
+/// Look up a port's `PortRegistry` by slug. Parallel to
+/// [`by_slug`] for the canonical-port-registry refactor (#0100).
+/// The registry exposes chain-walking lookup of labels +
+/// comments + prologues via the per-port `translation_to_parent`
+/// cohort tables.
+pub fn registry_by_slug(slug: &str) -> Option<&'static crate::registry::PortRegistry> {
+    match slug {
+        "amiga" => Some(&amiga::REGISTRY),
+        "gba_usa" => Some(&gba_usa::REGISTRY),
+        "genesis_europe" => Some(&genesis_europe::REGISTRY),
+        "msdos" => Some(&msdos::REGISTRY),
+        "snes" | "snes-eu" | "snes_eu" => Some(&snes::REGISTRY),
+        "symbian_demo" => Some(&symbian_demo::REGISTRY),
+        _ => None,
+    }
+}

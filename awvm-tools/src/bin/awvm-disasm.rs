@@ -81,6 +81,13 @@ fn main() -> ExitCode {
             return ExitCode::from(2);
         }
     };
+    let registry = match releases::registry_by_slug(&release_slug) {
+        Some(r) => r,
+        None => {
+            eprintln!("no registry for release {:?}", release_slug);
+            return ExitCode::from(2);
+        }
+    };
 
     let output_dir = cwd.join("output");
     let release_out = output_dir.join(&release_slug);
@@ -259,6 +266,7 @@ fn main() -> ExitCode {
             &asm,
             &mut video2,
             release_data,
+            registry,
         ) {
             Ok(d) => d,
             Err(e) => {

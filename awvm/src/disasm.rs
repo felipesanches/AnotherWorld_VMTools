@@ -117,6 +117,11 @@ pub struct AwvmDisassembler<'v> {
     /// LABELED_CINEMATIC_ENTRIES, STAGE_TITLES). Plumbed through so the
     /// disassembler is release-agnostic.
     pub release: &'static ReleaseData,
+    /// Cross-port registry with chain-walking label/comment lookup.
+    /// Used for `known_label` / `labeled_cinematic` resolution so
+    /// sibling ports inherit names from canonical via their
+    /// translation cohorts. See `crate::registry`.
+    pub registry: &'static crate::registry::PortRegistry,
 }
 
 impl<'v> AwvmDisassembler<'v> {
@@ -126,6 +131,7 @@ impl<'v> AwvmDisassembler<'v> {
         str_index: Vec<u8>,
         video2: &'v mut Video2Accumulator,
         release: &'static ReleaseData,
+        registry: &'static crate::registry::PortRegistry,
     ) -> Self {
         Self {
             game_level,
@@ -136,20 +142,25 @@ impl<'v> AwvmDisassembler<'v> {
             str_data,
             str_index,
             release,
+            registry,
         }
     }
 
-    /// Stage-aware variable name. Consults the current release's
-    /// `stage_specific_vars` table for the current `game_level`
-    /// first; falls back to the global `SPECIAL_PURPOSE_VARS`
-    /// table; last resort is the literal `[0xNN]` form.
+    /// Stage-aware variable name. Consults the registry's
+    /// per-stage `variable_aliases` first; falls back to the
+    /// global `SPECIAL_PURPOSE_VARS` table; last resort is the
+    /// literal `[0xNN]` form.
+    ///
+    /// (Variable aliases are not currently chain-walked through
+    /// the canonical-port registry — they're per-port stable in
+    /// practice. Could become chain-walked if a sibling port
+    /// inherits from canonical's per-stage var conventions; not
+    /// needed today.)
     fn variable_name(&self, value: u8) -> String {
-        for (lvl, aliases) in self.release.stage_specific_vars {
-            if *lvl == self.game_level {
-                for (var, name) in *aliases {
-                    if *var == value {
-                        return (*name).to_owned();
-                    }
+        if let Some(stage) = self.registry.stage(self.game_level) {
+            for (var, name) in stage.variable_aliases {
+                if *var == value {
+                    return (*name).to_owned();
                 }
             }
         }
@@ -160,25 +171,23 @@ impl<'v> AwvmDisassembler<'v> {
     }
 
     fn known_label(&self, addr: u32) -> Option<&'static str> {
-        for (lvl, labels) in self.release.known_labels {
-            if *lvl == self.game_level {
-                for (a, name) in *labels {
-                    if *a == addr {
-                        return Some(name);
-                    }
-                }
-            }
-        }
-        None
+        // Chain-walks via translation cohorts: sibling ports
+        // inherit labels from canonical (amiga) when their
+        // translation_to_parent table maps the address into a
+        // canonical address that has a name. Local labels
+        // always take precedence.
+        self.registry.resolve_label(self.game_level, addr)
     }
 
     fn is_unused_codeblock(&self, addr: u32) -> bool {
-        for (lvl, addrs) in self.release.possibly_unused_codeblocks {
-            if *lvl == self.game_level {
-                for a in *addrs {
-                    if *a == addr {
-                        return true;
-                    }
+        // possibly_unused_codeblocks is currently per-port (not
+        // chain-walked). Could plug into resolve_* if there's
+        // ever a canonical-vs-sibling distinction; for now
+        // every port lists its own set.
+        if let Some(stage) = self.registry.stage(self.game_level) {
+            for a in stage.possibly_unused_codeblocks {
+                if *a == addr {
+                    return true;
                 }
             }
         }
@@ -186,12 +195,25 @@ impl<'v> AwvmDisassembler<'v> {
     }
 
     fn labeled_cinematic(&self, addr: u32) -> Option<&'static str> {
-        for (lvl, labels) in self.release.labeled_cinematic_entries {
-            if *lvl == self.game_level {
-                for (a, name) in *labels {
-                    if *a == addr {
-                        return Some(name);
-                    }
+        // Per-port lookup only (NOT chain-walked). Cinematic-entry
+        // names live in the polygon-offset address space, where
+        // both ports independently use the same human-coined names
+        // for byte-equivalent polygon frames at different
+        // offsets (the polygon-renumbering pattern documented
+        // in research/22 + #0080). Chain-walking this lookup
+        // would emit duplicate EQU declarations on the sibling
+        // port — once for the local match, once for the chain
+        // hit on the same name at a different address.
+        //
+        // Polygon-name chain-walking is the territory of the
+        // proposed polygon-translation-cohort space (Phase 4
+        // follow-up — see the integration proposal §2 and the
+        // owner's 2026-05-10 design refinement). Until that
+        // lands, use per-port lookup only.
+        if let Some(stage) = self.registry.stage(self.game_level) {
+            for (a, name) in stage.cinematic_entries {
+                if *a == addr {
+                    return Some(name);
                 }
             }
         }
@@ -298,11 +320,9 @@ impl<'v> Disassembler for AwvmDisassembler<'v> {
         for (var, name) in SPECIAL_PURPOSE_VARS {
             s.push_str(&format!("{}\t\tEQU 0x{:02X}\n", name, var));
         }
-        for (lvl, aliases) in self.release.stage_specific_vars {
-            if *lvl == self.game_level {
-                for (var, name) in *aliases {
-                    s.push_str(&format!("{}\t\tEQU 0x{:02X}\n", name, var));
-                }
+        if let Some(stage) = self.registry.stage(self.game_level) {
+            for (var, name) in stage.variable_aliases {
+                s.push_str(&format!("{}\t\tEQU 0x{:02X}\n", name, var));
             }
         }
         for (addr, v) in self.cinematic_entries.iter() {
@@ -806,6 +826,7 @@ pub fn disassemble_level<'v>(
     out_asm_path: &Path,
     video2: &'v mut Video2Accumulator,
     release: &'static ReleaseData,
+    registry: &'static crate::registry::PortRegistry,
 ) -> io::Result<AwvmDisassembler<'v>> {
     let str_data = fs::read(str_data_path)?;
     let str_index = fs::read(str_index_path)?;
@@ -820,15 +841,14 @@ pub fn disassemble_level<'v>(
 
     // POSSIBLY_UNUSED_CODEBLOCKS: schedule each as a subroutine entry
     // point — matches the Python's `subroutines=POSSIBLY_UNUSED_CODEBLOCKS.get(...)`.
-    for (lvl, addrs) in release.possibly_unused_codeblocks {
-        if *lvl == game_level {
-            for a in *addrs {
-                tracer.schedule_entry_point(*a, true);
-            }
+    if let Some(stage) = registry.stage(game_level) {
+        for a in stage.possibly_unused_codeblocks {
+            tracer.schedule_entry_point(*a, true);
         }
     }
 
-    let mut dis = AwvmDisassembler::new(game_level, str_data, str_index, video2, release);
+    let mut dis =
+        AwvmDisassembler::new(game_level, str_data, str_index, video2, release, registry);
     tracer.run(&mut dis, &[0x0000]);
 
     if let Some(parent) = out_asm_path.parent() {
