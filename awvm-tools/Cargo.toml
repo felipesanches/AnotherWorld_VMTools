@@ -20,6 +20,10 @@ name = "awvm-asm"
 path = "src/bin/awvm-asm.rs"
 
 [[bin]]
+name = "awvm-render-polygons"
+path = "src/bin/awvm-render-polygons.rs"
+
+[[bin]]
 name = "adf-extract"
 path = "src/bin/adf-extract.rs"
 

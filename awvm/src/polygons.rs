@@ -32,6 +32,114 @@ pub struct PolygonDecoder {
     pdata_offset: u32,
 }
 
+/// Metadata for one polygon discovered by [`walk_linear`].
+///
+/// `kind == "solid"` polygons carry a colour-coded shape with a
+/// list of (x, y) coordinate pairs. `kind == "group"` polygons are
+/// hierarchies that reference other polygons by offset; rendering
+/// them recursively descends into the children.
+#[derive(Debug, Clone)]
+pub struct PolygonInfo {
+    pub offset: u32,
+    pub size: u32,
+    pub kind: PolygonKind,
+    pub header: u8,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PolygonKind {
+    Solid,
+    Group,
+}
+
+/// Linear-walk a polygon resource starting at `start_offset`,
+/// parsing each polygon and advancing by its byte size.
+///
+/// The walker mirrors `tools/polygon_walker.py` from the
+/// archaeology repo. Returns whatever polygons parsed cleanly;
+/// stops on parse failure (the bank's polygon table can be
+/// followed by zero-padding or other non-polygon data, so we
+/// don't treat parse failure as an error).
+pub fn walk_linear(data: &[u8], start_offset: u32) -> Vec<PolygonInfo> {
+    let mut out = Vec::new();
+    let mut offset = start_offset as usize;
+    while offset < data.len() {
+        match parse_polygon_header(data, offset) {
+            Some(info) => {
+                let size = info.size as usize;
+                out.push(info);
+                offset += size;
+            }
+            None => break,
+        }
+    }
+    out
+}
+
+fn parse_polygon_header(data: &[u8], offset: usize) -> Option<PolygonInfo> {
+    if offset >= data.len() {
+        return None;
+    }
+    let header = data[offset];
+    if header >= 0xC0 {
+        // Solid polygon: 1 byte header + 1 byte bbox_w + 1 byte
+        // bbox_h + 1 byte num_points + (num_points × 2) coordinate
+        // bytes.
+        if offset + 4 > data.len() {
+            return None;
+        }
+        let num_points = data[offset + 3];
+        if num_points & 1 != 0 || num_points == 0 || u32::from(num_points) >= MAX_POINTS {
+            return None;
+        }
+        let size = 4 + (num_points as u32) * 2;
+        if offset + (size as usize) > data.len() {
+            return None;
+        }
+        return Some(PolygonInfo {
+            offset: offset as u32,
+            size,
+            kind: PolygonKind::Solid,
+            header,
+        });
+    }
+    if (header & 0x3F) == 0x02 {
+        // Group polygon: 4-byte header + N children. Each child
+        // is 2 bytes (offset reference, with optional color flag) +
+        // 2 bytes (per-child position). If color flag set, +2 bytes
+        // for the color override pair.
+        if offset + 4 > data.len() {
+            return None;
+        }
+        let num_children = (data[offset + 3] as u32) + 1;
+        let mut size: u32 = 4;
+        for _ in 0..num_children {
+            let pos = offset + size as usize;
+            if pos + 4 > data.len() {
+                return None;
+            }
+            let off_hi = data[pos];
+            let off_lo = data[pos + 1];
+            let child_word = ((off_hi as u32) << 8) | off_lo as u32;
+            let color_override = child_word & 0x8000 != 0;
+            size += 4; // offset word + per-child position
+            if color_override {
+                size += 2;
+            }
+        }
+        if offset + (size as usize) > data.len() {
+            return None;
+        }
+        return Some(PolygonInfo {
+            offset: offset as u32,
+            size,
+            kind: PolygonKind::Group,
+            header,
+        });
+    }
+    None
+}
+
 impl PolygonDecoder {
     /// Build a decoder for cinematic-style entries (`cinematic.rom`
     /// + `palettes.rom`). `cinematic.rom` is laid out as nine
