@@ -18,6 +18,7 @@ pub mod disasm;
 pub mod memlist;
 pub mod opera;
 pub mod polygons;
+pub mod registry;
 pub mod releases;
 pub mod romset;
 pub mod unpacker;

@@ -6,11 +6,15 @@ authors.workspace = true
 license.workspace = true
 repository.workspace = true
 description = "Rust port of the Another World virtual machine toolchain."
+build = "build.rs"
 
 [lib]
 path = "src/lib.rs"
 
 [dependencies]
 exectrace = { path = "../exectrace" }
+
+[build-dependencies]
+toml = "0.8"
 
 [dev-dependencies]
