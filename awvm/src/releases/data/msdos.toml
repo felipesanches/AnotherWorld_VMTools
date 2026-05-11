@@ -43,6 +43,7 @@ labels = [
 ]
 possibly_unused_codeblocks = [0x007B, 0x0D1E, 0x109E]
 translation_to_parent = [
+    { start = 0x0000, end = 0x0001, kind = "shift", delta = 0 },
     { start = 0x0015, end = 0x00F6, kind = "shift", delta = 0 },
     { start = 0x00F6, end = 0x01AD, kind = "shift", delta = -22 },
     { start = 0x01AD, end = 0x07F4, kind = "shift", delta = -52 },
@@ -152,7 +153,6 @@ cinematic_translation_to_parent = [
     { start = 0xFDDC, end = 0xFDDD, kind = "shift", delta = -47998 },
 ]
 labels = [
-    [0x0000, "ENTRY_POINT_OF_INTRO_LEVEL"],
     [0x1F04, "INTRO_DJNZ_VAR04_RESET_TO_3"],
     [0x1F2F, "INTRO_DJNZ_VAR04_FROM_4_THEN_RESET_TO_3"],
 ]
@@ -160,6 +160,7 @@ cinematic_entries = [
 ]
 possibly_unused_codeblocks = [0x00D2, 0x1527, 0x154E, 0x1BD6]
 translation_to_parent = [
+    { start = 0x0000, end = 0x0001, kind = "shift", delta = 0 },
     { start = 0x007E, end = 0x00E7, kind = "shift", delta = -4 },
     { start = 0x00E7, end = 0x0290, kind = "shift", delta = -70 },
     { start = 0x0290, end = 0x037F, kind = "shift", delta = -116 },
@@ -188,10 +189,7 @@ idx = 2
 cinematic_translation_to_parent = [
 ]
 labels = [
-    [0x0000, "ENTRY_POINT_OF_LAKE_LEVEL"],
     [0x0060, "INIT_AUDIO_AND_SCENE_AFTER_LOADS"],
-    [0x04A3, "AMBIENT_RND_CASE_1"],
-    [0x1AF5, "SECOND_SCREEN_TO_THE_RIGHT"],
     [0x1ED3, "RESET_LAKE_FOR_RESPAWN"],
     [0x1F77, "DRAW_VINE_DECOR_3_LOOP"],
     [0x41C8, "HERO_AI_DISPATCH_AIRBORNE"],
@@ -210,6 +208,7 @@ variable_aliases = [
     [0x10, "COUNTER"],
 ]
 translation_to_parent = [
+    { start = 0x0000, end = 0x0001, kind = "shift", delta = 0 },
     { start = 0x0099, end = 0x01BC, kind = "shift", delta = -9 },
     { start = 0x01BC, end = 0x04DF, kind = "shift", delta = -66 },
     { start = 0x04DF, end = 0x1128, kind = "shift", delta = -70 },
@@ -246,6 +245,7 @@ variable_aliases = [
     [0x08, "BUDDY_Y"],
 ]
 translation_to_parent = [
+    { start = 0x0000, end = 0x0001, kind = "shift", delta = 0 },
     { start = 0x009E, end = 0x0120, kind = "shift", delta = 0 },
     { start = 0x0120, end = 0x04DF, kind = "shift", delta = -34 },
     { start = 0x04DF, end = 0x071A, kind = "shift", delta = 58 },
@@ -295,6 +295,7 @@ variable_aliases = [
     [0x02, "HERO_Y"],
 ]
 translation_to_parent = [
+    { start = 0x0000, end = 0x0001, kind = "shift", delta = 0 },
     { start = 0x00CD, end = 0x02AF, kind = "shift", delta = -13 },
     { start = 0x02AF, end = 0x071E, kind = "shift", delta = -25 },
     { start = 0x071E, end = 0x157D, kind = "shift", delta = -33 },
@@ -336,64 +337,17 @@ translation_to_parent = [
 
 [[stages]]
 idx = 5
+cinematic_translation_to_parent = [
+    { start = 0x40FA, end = 0x5DE9, kind = "shift", delta = 0 },
+]
 labels = [
-    [0x0000, "INLINE_SET_VAR6D_TO_0"],
     [0x001F, "TANK_STAGE_BOOT_SETUP_CHANNELS"],
 ]
 cinematic_entries = [
-    [0x40FA, "CAPSULE_DOME_CLOSING_F5"],
-    [0x4236, "CAPSULE_DOME_CLOSING_F0"],
-    [0x439C, "CAPSULE_DOME_CLOSING_F1"],
-    [0x43B0, "CAPSULE_DOME_CLOSING_F2"],
-    [0x4434, "CAPSULE_DOME_CLOSING_F3"],
-    [0x456E, "CAPSULE_DOME_CLOSING_F48"],
-    [0x45C2, "CAPSULE_DOME_CLOSING_F35"],
-    [0x460E, "CAPSULE_DOME_CLOSING_F29"],
-    [0x4646, "CAPSULE_DOME_CLOSING_F23"],
-    [0x467E, "CAPSULE_DOME_CLOSING_F21"],
-    [0x46B2, "CAPSULE_DOME_CLOSING_F19"],
-    [0x46FE, "CAPSULE_DOME_CLOSING_F33"],
-    [0x474A, "CAPSULE_DOME_CLOSING_F31"],
-    [0x479A, "CAPSULE_DOME_CLOSING_F27"],
-    [0x47EE, "CAPSULE_DOME_CLOSING_F25"],
-    [0x483E, "CAPSULE_DOME_CLOSING_F37"],
-    [0x488A, "CAPSULE_DOME_CLOSING_F39"],
-    [0x48D6, "CAPSULE_DOME_CLOSING_F41"],
-    [0x4922, "CAPSULE_DOME_CLOSING_F43"],
-    [0x496E, "CAPSULE_DOME_CLOSING_F45"],
-    [0x49BA, "CAPSULE_DOME_CLOSING_F47"],
-    [0x49D6, "CAPSULE_DOME_CLOSING_F36"],
-    [0x4A22, "CAPSULE_DOME_CLOSING_F30"],
-    [0x4A72, "CAPSULE_DOME_CLOSING_F24"],
-    [0x4AAA, "CAPSULE_DOME_CLOSING_F22"],
-    [0x4ADE, "CAPSULE_DOME_CLOSING_F20"],
-    [0x4B12, "CAPSULE_DOME_CLOSING_F34"],
-    [0x4B5E, "CAPSULE_DOME_CLOSING_F32"],
-    [0x4BAE, "CAPSULE_DOME_CLOSING_F28"],
-    [0x4C02, "CAPSULE_DOME_CLOSING_F26"],
-    [0x4C52, "CAPSULE_DOME_CLOSING_F38"],
-    [0x4C9E, "CAPSULE_DOME_CLOSING_F40"],
-    [0x4CEA, "CAPSULE_DOME_CLOSING_F42"],
-    [0x4D36, "CAPSULE_DOME_CLOSING_F44"],
-    [0x4D82, "CAPSULE_DOME_CLOSING_F46"],
-    [0x4DF2, "CAPSULE_DOME_CLOSING_F4"],
-    [0x4F86, "BUDDY"],
-    [0x5A1C, "CAPSULE_DOME_CLOSING_F6"],
-    [0x5A4A, "CAPSULE_DOME_CLOSING_F7"],
-    [0x5B0A, "CAPSULE_DOME_CLOSING_F9"],
-    [0x5B66, "CAPSULE_DOME_CLOSING_F10"],
-    [0x5B80, "CAPSULE_DOME_CLOSING_F11"],
-    [0x5B9A, "CAPSULE_DOME_CLOSING_F12"],
-    [0x5BB4, "CAPSULE_DOME_CLOSING_F13"],
-    [0x5BCE, "CAPSULE_DOME_CLOSING_F14"],
-    [0x5BE8, "CAPSULE_DOME_CLOSING_F15"],
-    [0x5C00, "CAPSULE_DOME_CLOSING_F16"],
-    [0x5C18, "CAPSULE_DOME_CLOSING_F8"],
-    [0x5DD0, "CAPSULE_DOME_CLOSING_F17"],
-    [0x5DE8, "CAPSULE_DOME_CLOSING_F18"],
 ]
 possibly_unused_codeblocks = [0x0405, 0x0A27, 0x0DCC, 0x13D9, 0x1868, 0x1903, 0x1DE7, 0x201A]
 translation_to_parent = [
+    { start = 0x0000, end = 0x0001, kind = "shift", delta = 0 },
     { start = 0x00BC, end = 0x0A32, kind = "shift", delta = -18 },
     { start = 0x0A32, end = 0x0BF6, kind = "shift", delta = -966 },
     { start = 0x0BF6, end = 0x1131, kind = "shift", delta = -1031 },
@@ -454,6 +408,7 @@ variable_aliases = [
     [0x08, "BUDDY_Y"],
 ]
 translation_to_parent = [
+    { start = 0x0000, end = 0x0001, kind = "shift", delta = 0 },
     { start = 0x017D, end = 0x0BD3, kind = "shift", delta = 15438 },
     { start = 0x0BD3, end = 0x11AA, kind = "shift", delta = -628 },
     { start = 0x11AA, end = 0x175B, kind = "shift", delta = -4205 },
@@ -524,6 +479,7 @@ labels = [
 ]
 possibly_unused_codeblocks = [0x0939, 0x0AD7]
 translation_to_parent = [
+    { start = 0x0000, end = 0x0001, kind = "shift", delta = 0 },
     { start = 0x002D, end = 0x044B, kind = "shift", delta = 0 },
     { start = 0x044B, end = 0x0AED, kind = "shift", delta = -266 },
     { start = 0x0AEE, end = 0x0B35, kind = "shift", delta = -266 },
@@ -533,7 +489,6 @@ translation_to_parent = [
 [[stages]]
 idx = 8
 labels = [
-    [0x0000, "PASSCODE_SCREEN_INIT"],
     [0x0021, "KILL_CHAN_AT_0021"],
     [0x0034, "LOAD_VAR0C_TO_VAR06"],
     [0x0046, "LOAD_VAR0E_TO_VAR06"],
@@ -612,6 +567,7 @@ labels = [
 ]
 possibly_unused_codeblocks = [0x014F, 0x029D, 0x03D4, 0x03E1, 0x064E, 0x06C1, 0x0733, 0x1078, 0x1088]
 translation_to_parent = [
+    { start = 0x0000, end = 0x0001, kind = "shift", delta = 0 },
     { start = 0x05F6, end = 0x0A93, kind = "shift", delta = -26 },
     { start = 0x0A93, end = 0x0BC5, kind = "shift", delta = -235 },
     { start = 0x0BC5, end = 0x1090, kind = "shift", delta = -311 },
