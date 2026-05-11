@@ -7,12 +7,12 @@
 port = "amiga"
 
 md5_checksums = [
-    ["bytecode.rom", "?"],
-    ["cinematic.rom", "?"],
-    ["palettes.rom", "?"],
+    ["bytecode.rom", "dbeeae497600f5ba5d51fdbf4e71ad1f"],
+    ["cinematic.rom", "429cb7b2c35b87de167dda491d2e3a72"],
+    ["palettes.rom", "8f4a9d5a5ccaefe7095f364895c009d9"],
     ["str_data.rom", "BAD_DUMP 6e4f0bcfc98b1e956686553d67011859"],
     ["str_index.rom", "BAD_DUMP 254a3e2c0a84fde07a600618b3e32744"],
-    ["video2.rom", "?"],
+    ["video2.rom", "ef35800c0c9effd2dd8388d140370d61"],
 ]
 
 stage_titles = [
