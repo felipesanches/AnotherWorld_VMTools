@@ -2687,7 +2687,7 @@ cinematic_entries = [
     [0xEA6E, "BUDDY_SMASHING_WINDOW_F1"],
     [0xEB1E, "BUDDY_SMASHING_WINDOW_F2"],
     [0xEBAA, "BUDDY_SMASHING_WINDOW_F3"],
-    [0xEBC6, "BUDDY_SURRENDERED_BY_GUARDS"],
+    [0xEBC6, "BEAST_JUMP_FRAME"],
     [0xF640, "BUDDY_SMASHING_WINDOW_F4"],
 ]
 possibly_unused_codeblocks = []
