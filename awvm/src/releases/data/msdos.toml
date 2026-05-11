@@ -189,11 +189,8 @@ idx = 2
 cinematic_translation_to_parent = [
 ]
 labels = [
-    [0x0060, "INIT_AUDIO_AND_SCENE_AFTER_LOADS"],
-    [0x1ED3, "RESET_LAKE_FOR_RESPAWN"],
     [0x1F77, "DRAW_VINE_DECOR_3_LOOP"],
     [0x41C8, "HERO_AI_DISPATCH_AIRBORNE"],
-    [0x5118, "HERO_CROUCH_RIGHT_HOLD"],
 ]
 cinematic_entries = [
     [0x04B0, "HERO_FALL_PRELUDE_FRAME"],
@@ -209,6 +206,7 @@ variable_aliases = [
 ]
 translation_to_parent = [
     { start = 0x0000, end = 0x0001, kind = "shift", delta = 0 },
+    { start = 0x0060, end = 0x0061, kind = "shift", delta = -9 },
     { start = 0x0099, end = 0x01BC, kind = "shift", delta = -9 },
     { start = 0x01BC, end = 0x04DF, kind = "shift", delta = -66 },
     { start = 0x04DF, end = 0x1128, kind = "shift", delta = -70 },
@@ -217,6 +215,7 @@ translation_to_parent = [
     { start = 0x1890, end = 0x1AF4, kind = "shift", delta = -96 },
     { start = 0x1AF4, end = 0x1DAC, kind = "shift", delta = -108 },
     { start = 0x1DAC, end = 0x1ED3, kind = "shift", delta = -227 },
+    { start = 0x1ED3, end = 0x1ED4, kind = "shift", delta = -240 },
     { start = 0x1ED4, end = 0x1F77, kind = "shift", delta = -227 },
     { start = 0x1F78, end = 0x1F88, kind = "shift", delta = -227 },
     { start = 0x1F88, end = 0x2789, kind = "shift", delta = -244 },
@@ -226,6 +225,7 @@ translation_to_parent = [
     { start = 0x41C9, end = 0x41E9, kind = "shift", delta = -337 },
     { start = 0x41E9, end = 0x510E, kind = "shift", delta = -404 },
     { start = 0x510E, end = 0x510F, kind = "shift", delta = -1695 },
+    { start = 0x5118, end = 0x5119, kind = "shift", delta = -1695 },
 ]
 
 [[stages]]
@@ -287,7 +287,6 @@ cinematic_translation_to_parent = [
 cinematic_entries = [
 ]
 labels = [
-    [0x0081, "LIKELY_A_COPY_PROTECTION_MECHANISM"],
 ]
 possibly_unused_codeblocks = [0x015D, 0x106F, 0x1456, 0x1518, 0x1D87, 0x2250, 0x25B7, 0x2617, 0x27E8, 0x297E, 0x2DF4, 0x30CD, 0x314D, 0x3A81, 0x3F75, 0x4080, 0x40BA, 0x42EE, 0x42F5, 0x4799, 0x4933, 0x49E6, 0x4AD1, 0x4B35, 0x4B36, 0x4CF5, 0x4DC9, 0x4F73, 0x50BA, 0x5282, 0x5BC7, 0x5E56, 0x5ED1, 0x5FCA, 0x60D7, 0x60E4, 0x6A6F, 0x71A8, 0x71B1, 0x7786, 0x7848, 0x8765, 0x877F, 0x878D, 0x8A97, 0x94E8, 0x9522, 0x9531, 0x9551, 0x9560, 0x958C, 0x9734, 0x9768, 0x9777, 0x9799, 0x987C, 0x988B, 0xA105, 0xA135, 0xA267, 0xAD4B, 0xC238, 0xC279, 0xC306, 0xD898, 0xD8F5, 0xDD31, 0xE615, 0xE7B9, 0xE957, 0xE977, 0xEAEB, 0xEB0B, 0xEF44, 0xF2E0, 0xF309, 0xF321]
 variable_aliases = [
@@ -296,6 +295,7 @@ variable_aliases = [
 ]
 translation_to_parent = [
     { start = 0x0000, end = 0x0001, kind = "shift", delta = 0 },
+    { start = 0x0081, end = 0x0082, kind = "shift", delta = 0 },
     { start = 0x00CD, end = 0x02AF, kind = "shift", delta = -13 },
     { start = 0x02AF, end = 0x071E, kind = "shift", delta = -25 },
     { start = 0x071E, end = 0x157D, kind = "shift", delta = -33 },
@@ -473,13 +473,13 @@ translation_to_parent = [
 [[stages]]
 idx = 7
 labels = [
-    [0x0024, "ENDING_CHANNEL_TOMBSTONE_KILL"],
     [0x0025, "LIKELY_A_COPY_PROTECTION_MECHANISM"],
     [0x0AED, "CREDITS_SCROLL_BLIT_FRAME_THEN_RENDER_83_OVER_80"],
 ]
 possibly_unused_codeblocks = [0x0939, 0x0AD7]
 translation_to_parent = [
     { start = 0x0000, end = 0x0001, kind = "shift", delta = 0 },
+    { start = 0x0024, end = 0x0025, kind = "shift", delta = 0 },
     { start = 0x002D, end = 0x044B, kind = "shift", delta = 0 },
     { start = 0x044B, end = 0x0AED, kind = "shift", delta = -266 },
     { start = 0x0AEE, end = 0x0B35, kind = "shift", delta = -266 },
