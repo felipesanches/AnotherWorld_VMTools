@@ -153,8 +153,8 @@ cinematic_translation_to_parent = [
     { start = 0xFDDC, end = 0xFDDD, kind = "shift", delta = -47998 },
 ]
 labels = [
-    [0x1F04, "INTRO_DJNZ_VAR04_RESET_TO_3"],
-    [0x1F2F, "INTRO_DJNZ_VAR04_FROM_4_THEN_RESET_TO_3"],
+    [0x1F04, "INTRO_DJNZ_VAR04_FROM_4_THEN_RESET_TO_3"],
+    [0x1F2F, "INTRO_DJNZ_VAR04_RESET_TO_3"],
 ]
 cinematic_entries = [
 ]
