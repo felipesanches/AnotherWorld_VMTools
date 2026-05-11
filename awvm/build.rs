@@ -239,22 +239,10 @@ fn emit_port_rs(port: &str, root: &Value) -> String {
             ));
         }
         if let Some(cohorts) = &stage.translation_to_parent {
-            s.push_str(&format!(
-                "static {}_STAGE_{}_COHORTS: &[crate::registry::TranslationCohort] = &[\n",
-                port_upper, stage.idx
-            ));
-            for c in cohorts {
-                let kind_expr = match c.kind.as_str() {
-                    "shift" => format!("crate::registry::CohortKind::Shift({})", c.delta),
-                    "no_parent" => "crate::registry::CohortKind::NoParent".to_owned(),
-                    other => panic!("unknown cohort kind {other:?}"),
-                };
-                s.push_str(&format!(
-                    "    crate::registry::TranslationCohort {{ start: 0x{:04X}, end: 0x{:04X}, kind: {} }},\n",
-                    c.start, c.end, kind_expr,
-                ));
-            }
-            s.push_str("];\n");
+            emit_cohorts_const(&mut s, &port_upper, stage.idx, "COHORTS", cohorts);
+        }
+        if let Some(cohorts) = &stage.cinematic_translation_to_parent {
+            emit_cohorts_const(&mut s, &port_upper, stage.idx, "CIN_COHORTS", cohorts);
         }
     }
     s.push_str("\n");
@@ -288,6 +276,11 @@ fn emit_port_rs(port: &str, root: &Value) -> String {
         } else {
             "&[]".to_owned()
         };
+        let cin_cohorts_ref = if stage.cinematic_translation_to_parent.is_some() {
+            format!("{}_STAGE_{}_CIN_COHORTS", port_upper, stage.idx)
+        } else {
+            "&[]".to_owned()
+        };
         s.push_str(&format!(
             "    crate::registry::StageRegistry {{\n\
              \x20       stage_idx: {idx},\n\
@@ -300,6 +293,7 @@ fn emit_port_rs(port: &str, root: &Value) -> String {
              \x20       possibly_unused_codeblocks: {unused_ref},\n\
              \x20       variable_aliases: {aliases_ref},\n\
              \x20       translation_to_parent: {cohorts_ref},\n\
+             \x20       cinematic_translation_to_parent: {cin_cohorts_ref},\n\
              \x20   }},\n",
             idx = stage.idx,
         ));
@@ -343,9 +337,13 @@ struct StageData {
     cinematic_entries: Option<Vec<(u32, String)>>,
     possibly_unused_codeblocks: Option<Vec<u32>>,
     variable_aliases: Option<Vec<(u8, String)>>,
-    /// Sibling-port translation cohorts (Phase 2). For canonical
-    /// ports this is None / empty.
+    /// Sibling-port byte-address translation cohorts (Phase 2).
+    /// For canonical ports this is None / empty.
     translation_to_parent: Option<Vec<CohortData>>,
+    /// Sibling-port CINEMATIC (polygon-offset) translation
+    /// cohorts. Distinct address space from bytecode; see
+    /// archaeology issue #0105.
+    cinematic_translation_to_parent: Option<Vec<CohortData>>,
 }
 
 struct CohortData {
@@ -395,23 +393,13 @@ fn collect_stages(root: &Value) -> Vec<StageData> {
             );
         }
         if let Some(cohorts) = t.get("translation_to_parent").and_then(Value::as_array) {
-            s.translation_to_parent = Some(
-                cohorts
-                    .iter()
-                    .map(|v| {
-                        let table = v.as_table().unwrap();
-                        let start = table.get("start").and_then(Value::as_integer).unwrap() as u32;
-                        let end = table.get("end").and_then(Value::as_integer).unwrap() as u32;
-                        let kind = table.get("kind").and_then(Value::as_str).unwrap().to_owned();
-                        let delta = table
-                            .get("delta")
-                            .and_then(Value::as_integer)
-                            .map(|i| i as i32)
-                            .unwrap_or(0);
-                        CohortData { start, end, kind, delta }
-                    })
-                    .collect(),
-            );
+            s.translation_to_parent = Some(parse_cohorts(cohorts));
+        }
+        if let Some(cohorts) = t
+            .get("cinematic_translation_to_parent")
+            .and_then(Value::as_array)
+        {
+            s.cinematic_translation_to_parent = Some(parse_cohorts(cohorts));
         }
         stages.push(s);
     }
@@ -425,6 +413,43 @@ fn parse_addr_name_pair(v: &Value) -> (u32, String) {
     let addr = a[0].as_integer().unwrap() as u32;
     let name = a[1].as_str().unwrap().to_owned();
     (addr, name)
+}
+
+fn emit_cohorts_const(s: &mut String, port_upper: &str, stage_idx: u32,
+                       suffix: &str, cohorts: &[CohortData]) {
+    s.push_str(&format!(
+        "static {}_STAGE_{}_{}: &[crate::registry::TranslationCohort] = &[\n",
+        port_upper, stage_idx, suffix
+    ));
+    for c in cohorts {
+        let kind_expr = match c.kind.as_str() {
+            "shift" => format!("crate::registry::CohortKind::Shift({})", c.delta),
+            "no_parent" => "crate::registry::CohortKind::NoParent".to_owned(),
+            other => panic!("unknown cohort kind {other:?}"),
+        };
+        s.push_str(&format!(
+            "    crate::registry::TranslationCohort {{ start: 0x{:04X}, end: 0x{:04X}, kind: {} }},\n",
+            c.start, c.end, kind_expr,
+        ));
+    }
+    s.push_str("];\n");
+}
+
+fn parse_cohorts(arr: &[Value]) -> Vec<CohortData> {
+    arr.iter()
+        .map(|v| {
+            let table = v.as_table().unwrap();
+            let start = table.get("start").and_then(Value::as_integer).unwrap() as u32;
+            let end = table.get("end").and_then(Value::as_integer).unwrap() as u32;
+            let kind = table.get("kind").and_then(Value::as_str).unwrap().to_owned();
+            let delta = table
+                .get("delta")
+                .and_then(Value::as_integer)
+                .map(|i| i as i32)
+                .unwrap_or(0);
+            CohortData { start, end, kind, delta }
+        })
+        .collect()
 }
 
 fn esc_str(s: &str) -> String {

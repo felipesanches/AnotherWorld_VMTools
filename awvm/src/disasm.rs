@@ -195,29 +195,28 @@ impl<'v> AwvmDisassembler<'v> {
     }
 
     fn labeled_cinematic(&self, addr: u32) -> Option<&'static str> {
-        // Per-port lookup only (NOT chain-walked). Cinematic-entry
-        // names live in the polygon-offset address space, where
-        // both ports independently use the same human-coined names
-        // for byte-equivalent polygon frames at different
-        // offsets (the polygon-renumbering pattern documented
-        // in research/22 + #0080). Chain-walking this lookup
-        // would emit duplicate EQU declarations on the sibling
-        // port — once for the local match, once for the chain
-        // hit on the same name at a different address.
+        // Chain-walked lookup via the polygon-address
+        // translation cohorts in each sibling's
+        // `cinematic_translation_to_parent` table. Local
+        // entries (the sibling's own port-exclusive names) take
+        // precedence; on a miss, the address is translated to
+        // the canonical port (amiga) via the polygon cohorts
+        // and looked up there.
         //
-        // Polygon-name chain-walking is the territory of the
-        // proposed polygon-translation-cohort space (Phase 4
-        // follow-up — see the integration proposal §2 and the
-        // owner's 2026-05-10 design refinement). Until that
-        // lands, use per-port lookup only.
-        if let Some(stage) = self.registry.stage(self.game_level) {
-            for (a, name) in stage.cinematic_entries {
-                if *a == addr {
-                    return Some(name);
-                }
-            }
-        }
-        None
+        // The polygon address space is distinct from the
+        // bytecode address space, so we cannot reuse
+        // `translation_to_parent` (byte-address cohorts) for
+        // this — applying byte-addr translation to polygon
+        // offsets returns wrong addresses. The separate
+        // `cinematic_translation_to_parent` field captures the
+        // polygon-renumbering pattern (research/22, #0080) as
+        // shift cohorts.
+        //
+        // Per archaeology issue #0105, shared cinematic names
+        // are deduped into amiga.toml (the canonical); siblings
+        // hold only port-exclusive cinematic entries plus the
+        // polygon translation table.
+        self.registry.resolve_cinematic_entry(self.game_level, addr)
     }
 
     /// Returns the human-readable label for an address, registering it

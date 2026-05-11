@@ -74,6 +74,16 @@ pub struct StageRegistry {
     /// archaeology-side `data/port_registries/<port>.toml`.
     /// Empty on canonical and on Phase 1 sibling registries.
     pub translation_to_parent: &'static [TranslationCohort],
+    /// Cohort table for translating sibling CINEMATIC (polygon-
+    /// offset) addresses to parent cinematic addresses. The
+    /// polygon address space is distinct from the bytecode
+    /// address space, so this cannot share `translation_to_-
+    /// parent` — applying the byte-address translation to
+    /// polygon offsets gives wrong results. Empty on canonical.
+    /// Populated for siblings via the archaeology-side
+    /// `tools/build_polygon_translations.py` and deduped UP per
+    /// archaeology issue #0105.
+    pub cinematic_translation_to_parent: &'static [TranslationCohort],
 }
 
 pub struct TranslationCohort {
@@ -152,7 +162,11 @@ impl PortRegistry {
             return Some(name);
         }
         let parent = self.parent?;
-        let parent_addr = translate_addr(stage.translation_to_parent, addr)?;
+        // Use the polygon-address translation cohorts, NOT the
+        // byte-address ones — cinematic offsets live in a
+        // different address space.
+        let parent_addr =
+            translate_addr(stage.cinematic_translation_to_parent, addr)?;
         let parent_stage = stage.parent_stage_idx.unwrap_or(stage_idx);
         parent.resolve_cinematic_with_depth(parent_stage, parent_addr, depth - 1)
     }
@@ -339,6 +353,7 @@ mod tests {
             possibly_unused_codeblocks: EMPTY_CODEBLOCKS,
             variable_aliases: EMPTY_VAR_ALIASES,
             translation_to_parent: EMPTY_COHORTS,
+            cinematic_translation_to_parent: EMPTY_COHORTS,
         },
     ];
 
@@ -378,6 +393,7 @@ mod tests {
             possibly_unused_codeblocks: EMPTY_CODEBLOCKS,
             variable_aliases: EMPTY_VAR_ALIASES,
             translation_to_parent: MSDOS_STAGE_2_COHORTS,
+            cinematic_translation_to_parent: EMPTY_COHORTS,
         },
     ];
 
