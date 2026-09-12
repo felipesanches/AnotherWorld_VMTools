@@ -312,6 +312,17 @@ impl<'v> AwvmDisassembler<'v> {
     /// Returns the human-readable label for an address, registering it
     /// with the tracer so the listing emitter prefixes it with the
     /// label declaration.
+    /// A video-page operand: the registry's symbol when the value has one,
+    /// otherwise a hex literal. Only exact values are named — `copyVideoPage src`
+    /// carries flag bits on top of a page number, and naming a composite would
+    /// claim more than is known (see docs/NAMING.md §6).
+    fn page(&self, v: u8) -> String {
+        match self.registry.video_page_name(v) {
+            Some(n) => n.to_owned(),
+            None => format!("0x{:02X}", v),
+        }
+    }
+
     fn label_name_register(&self, t: &mut Tracer, addr: u32) -> String {
         t.register_label(addr);
         if let Some(name) = self.known_label(addr) {
@@ -443,6 +454,12 @@ impl<'v> Disassembler for AwvmDisassembler<'v> {
         }
         for (var, name) in SPECIAL_PURPOSE_VARS {
             s.push_str(&format!("{}\t\tEQU 0x{:02X}\n", name, var));
+        }
+        // Page symbols must be defined before use: the assembler resolves an
+        // unknown symbol to 0 without complaining, so a missing EQU here would
+        // change bytes silently rather than fail.
+        for (v, name) in self.registry.video_page_names_effective() {
+            s.push_str(&format!("{}\t\tEQU 0x{:02X}\n", name, v));
         }
         if let Some(stage) = self.registry.stage(self.game_level) {
             for (var, name) in stage.variable_aliases {
@@ -831,21 +848,21 @@ impl<'v> AwvmDisassembler<'v> {
             }
             0x0d => {
                 let id = t.fetch();
-                format!("selectVideoPage 0x{:02X}", id)
+                format!("selectVideoPage {}", self.page(id))
             }
             0x0e => {
                 let page = t.fetch();
                 let color = t.fetch();
-                format!("fill page=0x{:02X}, color=0x{:02X}", page, color)
+                format!("fill page={}, color=0x{:02X}", self.page(page), color)
             }
             0x0f => {
                 let src = t.fetch();
                 let dst = t.fetch();
-                format!("copyVideoPage src=0x{:02X}, dst=0x{:02X}", src, dst)
+                format!("copyVideoPage src={}, dst={}", self.page(src), self.page(dst))
             }
             0x10 => {
                 let page = t.fetch();
-                format!("blitFramebuffer 0x{:02X}", page)
+                format!("blitFramebuffer {}", self.page(page))
             }
             0x11 => "killChannel".to_owned(),
             0x12 => {

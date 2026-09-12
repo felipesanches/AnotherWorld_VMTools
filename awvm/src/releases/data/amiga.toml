@@ -29,6 +29,31 @@ stage_titles = [
     "Secret Code Entry Screen",
 ]
 
+# Video-page operand names. Port- and stage-invariant, so they live at port level
+# and siblings inherit them. Evidence, all from the bytecode itself and reproducible
+# with archaeology's tools/operand_inventory.py --layer proofs:
+#
+#   0xFF  the work/back buffer. The universal idiom is `fill page=0xFF`,
+#         `selectVideoPage 0xFF`, draw, `blitFramebuffer 0xFF`, and it is the most
+#         common operand in all three positions.
+#   0xFE  the currently displayed buffer. `setPalette N` immediately followed by
+#         `blitFramebuffer 0xFE` occurs 38 times: a palette flash, which re-presents
+#         pixels already on screen without drawing anything.
+#   0x00..0x03  the four real pages.
+#
+# NOT named: 0x40, 0x80, 0x83, 0xC0. Those carry flag bits on top of a page number.
+# Bit 7 is probably "offset the copy by SCROLL_Y", but only 68 of 214 such sites
+# have a SCROLL_Y write within three lines, and bit 6 is not understood at all.
+# Naming them would assert more than is known. See docs/NAMING.md §6.
+video_page_names = [
+    [0x00, "PAGE_0"],
+    [0x01, "PAGE_1"],
+    [0x02, "PAGE_2"],
+    [0x03, "PAGE_3"],
+    [0xFE, "PAGE_DISPLAY"],
+    [0xFF, "PAGE_WORK"],
+]
+
 [resource_ids]
 bytecode = [0x15, 0x18, 0x1B, 0x1E, 0x21, 0x24, 0x27, 0x2A, 0x7E]
 screen = [0x12, 0x13, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x53, 0x90, 0x91]

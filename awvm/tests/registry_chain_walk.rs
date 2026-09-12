@@ -127,3 +127,42 @@ fn comments_do_not_resolve_for_an_unmapped_address() {
     assert!(msdos::REGISTRY.resolve_comment(2, 0xFFFE).is_none());
     assert!(amiga::REGISTRY.resolve_comment(2, 0xFFFE).is_none());
 }
+
+/// T7: a sibling must emit the SAME page symbols it uses. Defining them from the
+/// local table while resolving them through the chain produced a listing that
+/// referenced `PAGE_WORK` without defining it, and the assembler resolves an
+/// unknown symbol to 0 silently — every MS-DOS level changed bytes. Only the
+/// round-trip caught it, so the invariant is pinned here too.
+#[test]
+fn page_names_used_are_also_defined() {
+    for reg in [&amiga::REGISTRY, &msdos::REGISTRY] {
+        let effective = reg.video_page_names_effective();
+        assert!(
+            !effective.is_empty(),
+            "no page-name table in effect; the emitter would produce literals \
+             where the canonical port expects symbols"
+        );
+        // Every value the resolver will name must appear in the table the header
+        // emits, or the listing uses a symbol it never defines.
+        for &(v, name) in effective {
+            assert_eq!(
+                reg.video_page_name(v),
+                Some(name),
+                "0x{v:02X} resolves to a different name than the one defined"
+            );
+        }
+    }
+}
+
+/// The flagged `copyVideoPage src` values stay literals on purpose: bit 7 is
+/// probably a SCROLL_Y offset but only 68 of 214 sites support that, and bit 6 is
+/// not understood. A name here would assert more than the evidence does.
+#[test]
+fn flagged_page_values_are_not_named() {
+    for v in [0x40u8, 0x80, 0x83, 0xC0] {
+        assert!(
+            amiga::REGISTRY.video_page_name(v).is_none(),
+            "0x{v:02X} carries flag bits and must not be named yet"
+        );
+    }
+}

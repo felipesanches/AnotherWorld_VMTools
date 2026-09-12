@@ -45,6 +45,15 @@ pub struct PortRegistry {
     pub resource_ids_palette: &'static [u8],
     pub resource_ids_cinematic: &'static [u8],
     pub resource_ids_video2: &'static [u8],
+    /// Symbolic names for video-page operand values (plan item T7).
+    ///
+    /// Port-level rather than per-stage: a page id means the same thing in every
+    /// stage and every port, unlike a palette slot. Only exact values are named —
+    /// `copyVideoPage src` carries flag bits on top of a page number (0x80 is
+    /// probably "offset by SCROLL_Y", 0x40 is not understood at all), and naming a
+    /// composite would assert more than the evidence supports. See
+    /// `docs/NAMING.md` §6.
+    pub video_page_names: &'static [(u8, &'static str)],
 }
 
 /// Per-stage data within a port. Each `pairs`-shaped table is
@@ -135,6 +144,34 @@ impl PortRegistry {
         let parent_addr = translate_addr(stage.translation_to_parent, addr)?;
         let parent_stage = stage.parent_stage_idx.unwrap_or(stage_idx);
         parent.resolve_label_with_depth(parent_stage, parent_addr, depth - 1)
+    }
+
+    /// The page-name table in effect for this port: its own if it has one,
+    /// otherwise the parent's.
+    ///
+    /// The emitter needs this, not the local field. Emitting symbolic operands by
+    /// chain-walking while defining the EQUs from the local table produced a
+    /// listing that used `PAGE_WORK` without defining it, and the assembler
+    /// resolves an unknown symbol to 0 without complaining — so every MS-DOS level
+    /// silently changed bytes. The round-trip gate caught it; nothing else would
+    /// have.
+    pub fn video_page_names_effective(&'static self) -> &'static [(u8, &'static str)] {
+        if !self.video_page_names.is_empty() {
+            return self.video_page_names;
+        }
+        match self.parent {
+            Some(p) => p.video_page_names_effective(),
+            None => &[],
+        }
+    }
+
+    /// Name for a video-page operand value, or `None` to emit a literal.
+    /// Falls through to the parent so a sibling inherits canonical's table.
+    pub fn video_page_name(&'static self, v: u8) -> Option<&'static str> {
+        if let Some(&(_, n)) = self.video_page_names.iter().find(|&&(a, _)| a == v) {
+            return Some(n);
+        }
+        self.parent?.video_page_name(v)
     }
 
     /// Walk the chain to resolve a cinematic-entry label
@@ -366,6 +403,7 @@ mod tests {
         md5_checksums: &[],
         resource_ids_bytecode: &[],
         resource_ids_screen: &[],
+        video_page_names: &[],
         resource_ids_music: &[],
         resource_ids_sample: &[],
         resource_ids_palette: &[],
@@ -406,6 +444,7 @@ mod tests {
         md5_checksums: &[],
         resource_ids_bytecode: &[],
         resource_ids_screen: &[],
+        video_page_names: &[],
         resource_ids_music: &[],
         resource_ids_sample: &[],
         resource_ids_palette: &[],

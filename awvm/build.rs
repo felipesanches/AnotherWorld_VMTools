@@ -342,6 +342,26 @@ fn emit_port_rs(port: &str, root: &Value) -> String {
     }
     s.push_str("];\n\n");
 
+    // video_page_names = [[0xFF, "PAGE_WORK"], ...]
+    s.push_str("static VIDEO_PAGE_NAMES: &[(u8, &str)] = &[\n");
+    if let Some(arr) = root.get("video_page_names").and_then(Value::as_array) {
+        let mut rows: Vec<(u8, String)> = arr
+            .iter()
+            .map(|e| {
+                let p = e.as_array().expect("video_page_names entry must be a pair");
+                (
+                    p[0].as_integer().expect("page value must be an integer") as u8,
+                    p[1].as_str().expect("page name must be a string").to_owned(),
+                )
+            })
+            .collect();
+        rows.sort_by_key(|(v, _)| *v);
+        for (v, n) in rows {
+            s.push_str(&format!("    (0x{:02X}, {}),\n", v, esc_str(&n)));
+        }
+    }
+    s.push_str("];\n\n");
+
     let parent = root.get("parent").and_then(Value::as_str);
     let parent_expr = match parent {
         Some(p) => format!("Some(&crate::releases::{}::REGISTRY)", p),
@@ -363,6 +383,7 @@ fn emit_port_rs(port: &str, root: &Value) -> String {
          \x20   resource_ids_palette: resource_ids::PALETTE,\n\
          \x20   resource_ids_cinematic: resource_ids::CINEMATIC,\n\
          \x20   resource_ids_video2: resource_ids::VIDEO2,\n\
+         \x20   video_page_names: VIDEO_PAGE_NAMES,\n\
          }};\n",
         esc_str(port),
         esc_str(slug),
