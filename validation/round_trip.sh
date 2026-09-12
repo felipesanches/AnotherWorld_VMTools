@@ -16,6 +16,10 @@
 # msdos / amiga / genesis_europe at multiple commits during the
 # port; the git history retains them.
 #
+# Every level is checked even when an earlier one fails; the exit status is
+# non-zero if any level failed. (It used to abort at the first failure — see the
+# SIGPIPE note in the loop below.)
+#
 # Usage:
 #     validation/round_trip.sh <input_dir>
 #
@@ -62,8 +66,15 @@ for lvl in 0 1 2 3 4 5 6 7 8; do
     if cmp -s "$OUT_DIR/orig_level_$lvl.bin" "$bin"; then
         printf "  level %d: OK (%d bytes)\n" "$lvl" "$(wc -c < "$bin")"
     else
-        echo "  level $lvl: FAILED"
-        cmp -l "$OUT_DIR/orig_level_$lvl.bin" "$bin" | head -3
+        # `cmp -l | head` would hand cmp a SIGPIPE, and under `set -o pipefail`
+        # that aborted the whole loop at the first failing level — so levels
+        # after it were never checked and the real scope of a regression stayed
+        # hidden. Capture the full diff first, then show a few lines.
+        ndiff="$(cmp -l "$OUT_DIR/orig_level_$lvl.bin" "$bin" | wc -l || true)"
+        printf "  level %d: FAILED (%s byte(s) differ)\n" "$lvl" "$ndiff"
+        cmp -l "$OUT_DIR/orig_level_$lvl.bin" "$bin" > "$OUT_DIR/diff_level_$lvl.txt" || true
+        head -5 "$OUT_DIR/diff_level_$lvl.txt" | sed 's/^/      /'
+        echo "      (full diff: $OUT_DIR/diff_level_$lvl.txt)"
         fail=1
     fi
 done

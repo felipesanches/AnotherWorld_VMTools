@@ -4,7 +4,8 @@
 //! text is byte-for-byte the same as the Python reference for any
 //! input the Python reference accepts.
 
-use std::collections::BTreeMap;
+use std::cell::RefCell;
+use std::collections::{BTreeMap, HashMap};
 use std::fs;
 use std::io;
 use std::path::Path;
@@ -122,6 +123,62 @@ pub struct AwvmDisassembler<'v> {
     /// sibling ports inherit names from canonical via their
     /// translation cohorts. See `crate::registry`.
     pub registry: &'static crate::registry::PortRegistry,
+    /// Which address currently owns each resolved label name, for this
+    /// level only. The chain walk can map two sibling addresses onto one
+    /// canonical address (two cohorts shifting onto the same target, or a
+    /// shift plus implicit identity), which made the emitter declare the
+    /// same label twice; the assembler then keeps one definition per name
+    /// and every reference collapsed onto a single address, silently
+    /// corrupting the other. See archaeology issue #0118.
+    ///
+    /// First claimant keeps the name; later addresses fall back to a
+    /// `LABEL_`/`JUNK__` placeholder, which is honest — nobody has named
+    /// that second instance yet — and keeps the round-trip byte-identical.
+    name_owner: RefCell<HashMap<&'static str, u32>>,
+    /// `(name, owner_addr, rejected_addr)` for every rejection above, so
+    /// the caller can report the naming debt instead of hiding it.
+    name_collisions: RefCell<Vec<(&'static str, u32, u32)>>,
+    /// Same rule for cinematic EQU names, which collide for the same reason
+    /// and with a worse effect: two polygon offsets resolving to one name
+    /// emit two `NAME EQU 0x…` lines with different values, and the
+    /// assembler's last-definition-wins makes every `video offset=NAME`
+    /// assemble to one of them. Maps a claimed cinematic label to the
+    /// polygon offset that owns it. See #0118 and #0107.
+    cinematic_labels_used: HashMap<String, u32>,
+    /// `(name, owner_offset, rejected_offset)` for cinematic rejections.
+    cinematic_name_collisions: Vec<(String, u32, u32)>,
+}
+
+/// Outcome of claiming a label name for an address within one level.
+#[derive(Debug, PartialEq, Eq)]
+pub enum Claim {
+    /// This address owns the name (it just claimed it, or already held it).
+    Held,
+    /// Another address owns it; the caller must fall back to a placeholder.
+    TakenBy(u32),
+}
+
+/// One name, one address, per level.
+///
+/// The cross-port chain walk can map two sibling addresses onto the same
+/// canonical address and therefore the same name. Emitting it twice made the
+/// assembler keep a single definition, so every reference collapsed onto one
+/// address and the other assembled to the wrong target — 71 corrupted bytes
+/// across four MS-DOS levels before this rule existed (#0118). First claimant
+/// wins; the rule is deterministic because trace order is.
+pub fn claim_name(
+    owners: &mut HashMap<&'static str, u32>,
+    name: &'static str,
+    addr: u32,
+) -> Claim {
+    match owners.get(name).copied() {
+        Some(owner) if owner == addr => Claim::Held,
+        Some(owner) => Claim::TakenBy(owner),
+        None => {
+            owners.insert(name, addr);
+            Claim::Held
+        }
+    }
 }
 
 impl<'v> AwvmDisassembler<'v> {
@@ -143,6 +200,10 @@ impl<'v> AwvmDisassembler<'v> {
             str_index,
             release,
             registry,
+            name_owner: RefCell::new(HashMap::new()),
+            name_collisions: RefCell::new(Vec::new()),
+            cinematic_labels_used: HashMap::new(),
+            cinematic_name_collisions: Vec::new(),
         }
     }
 
@@ -176,7 +237,36 @@ impl<'v> AwvmDisassembler<'v> {
         // translation_to_parent table maps the address into a
         // canonical address that has a name. Local labels
         // always take precedence.
-        self.registry.resolve_label(self.game_level, addr)
+        let name = self.registry.resolve_label(self.game_level, addr)?;
+
+        // A name may be claimed by exactly one address per level (#0118).
+        match claim_name(&mut self.name_owner.borrow_mut(), name, addr) {
+            Claim::Held => Some(name),
+            Claim::TakenBy(owner) => {
+                self.name_collisions
+                    .borrow_mut()
+                    .push((name, owner, addr));
+                None
+            }
+        }
+    }
+
+    /// `(name, owner_offset, rejected_offset)` cinematic-name collisions for
+    /// this level. Non-empty means two polygon offsets resolve to one name;
+    /// the loser falls back to its numeric `CINEMATIC_NNN`. See #0118/#0107.
+    pub fn cinematic_name_collisions(&self) -> &[(String, u32, u32)] {
+        &self.cinematic_name_collisions
+    }
+
+    /// Deduplicated `(name, owner_addr, rejected_addr)` list of label-name
+    /// collisions seen while disassembling this level. Non-empty means the
+    /// registry maps two addresses onto one canonical name; each entry is a
+    /// routine instance that still needs its own name. See issue #0118.
+    pub fn label_name_collisions(&self) -> Vec<(&'static str, u32, u32)> {
+        let mut v = self.name_collisions.borrow().clone();
+        v.sort_unstable();
+        v.dedup();
+        v
     }
 
     fn is_unused_codeblock(&self, addr: u32) -> bool {
@@ -244,10 +334,29 @@ impl<'v> AwvmDisassembler<'v> {
         if let Some(existing) = self.cinematic_entries.get(&address) {
             return existing.label.clone();
         }
+        // A cinematic name may be claimed by exactly one polygon offset per
+        // level. Two offsets resolving to one name would emit two EQU lines
+        // with different values, and every reference would assemble to
+        // whichever the assembler saw last (#0118).
+        let numeric = format!("CINEMATIC_{:03}", self.cinematic_counter);
         let label = match self.labeled_cinematic(address) {
-            Some(name) => format!("CINEMATIC_{}", name),
-            None => format!("CINEMATIC_{:03}", self.cinematic_counter),
+            Some(name) => {
+                let candidate = format!("CINEMATIC_{}", name);
+                match self.cinematic_labels_used.get(&candidate).copied() {
+                    Some(owner) => {
+                        self.cinematic_name_collisions.push((
+                            candidate,
+                            owner,
+                            address,
+                        ));
+                        numeric
+                    }
+                    None => candidate,
+                }
+            }
+            None => numeric,
         };
+        self.cinematic_labels_used.insert(label.clone(), address);
         self.cinematic_counter += 1;
         self.cinematic_entries.insert(
             address,
@@ -855,5 +964,89 @@ pub fn disassemble_level<'v>(
     }
     tracer.save_disassembly_listing(&dis, out_asm_path)?;
 
+    // Report label-name collisions rather than emitting a duplicate label
+    // and letting the assembler silently pick one (#0118). These are real
+    // naming debt: a second instance of a canonical routine that needs its
+    // own name in the port's local registry.
+    let collisions = dis.label_name_collisions();
+    if !collisions.is_empty() {
+        eprintln!(
+            "warning: level {}: {} label-name collision(s); the later address \
+             falls back to a placeholder so the round-trip stays byte-identical. \
+             Name these in the port's local registry (archaeology issue #0118):",
+            game_level,
+            collisions.len()
+        );
+        for (name, owner, rejected) in &collisions {
+            eprintln!(
+                "  {} is held by 0x{:04X}; 0x{:04X} emitted as a placeholder",
+                name, owner, rejected
+            );
+        }
+    }
+
+    let cin = dis.cinematic_name_collisions();
+    if !cin.is_empty() {
+        eprintln!(
+            "warning: level {}: {} cinematic-name collision(s); the later polygon \
+             offset falls back to its numeric CINEMATIC_NNN. Two offsets sharing a \
+             name is the #0107 misapplication showing up as a byte-level defect:",
+            game_level,
+            cin.len()
+        );
+        for (name, owner, rejected) in cin {
+            eprintln!(
+                "  {} is held by offset 0x{:04X}; 0x{:04X} fell back to numeric",
+                name, owner, rejected
+            );
+        }
+    }
+
     Ok(dis)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// #0118: the first address to claim a name keeps it; a second address
+    /// resolving to the same name is told to use a placeholder instead, which
+    /// is what keeps the round-trip byte-identical.
+    #[test]
+    fn one_name_one_address_per_level() {
+        let mut owners: HashMap<&'static str, u32> = HashMap::new();
+
+        // msdos level 6: 0x76E9 and 0x84CC both chain-walk to amiga 0x5E84.
+        assert_eq!(claim_name(&mut owners, "DRAW_ALIEN_POSE_0_0", 0x76E9), Claim::Held);
+        assert_eq!(
+            claim_name(&mut owners, "DRAW_ALIEN_POSE_0_0", 0x84CC),
+            Claim::TakenBy(0x76E9)
+        );
+    }
+
+    /// The owner may re-ask as often as it likes: the label declaration and
+    /// every operand referencing it go through the same lookup, and they must
+    /// agree or the listing would declare one name and reference another.
+    #[test]
+    fn claim_is_idempotent_for_the_owner() {
+        let mut owners: HashMap<&'static str, u32> = HashMap::new();
+        assert_eq!(claim_name(&mut owners, "KILL_CHANNEL_ROUTINE", 0x007A), Claim::Held);
+        assert_eq!(claim_name(&mut owners, "KILL_CHANNEL_ROUTINE", 0x007A), Claim::Held);
+        assert_eq!(
+            claim_name(&mut owners, "KILL_CHANNEL_ROUTINE", 0x007E),
+            Claim::TakenBy(0x007A)
+        );
+        // ...and the rejection does not transfer ownership.
+        assert_eq!(claim_name(&mut owners, "KILL_CHANNEL_ROUTINE", 0x007A), Claim::Held);
+    }
+
+    /// Distinct names are independent.
+    #[test]
+    fn distinct_names_do_not_interfere() {
+        let mut owners: HashMap<&'static str, u32> = HashMap::new();
+        assert_eq!(claim_name(&mut owners, "A", 1), Claim::Held);
+        assert_eq!(claim_name(&mut owners, "B", 2), Claim::Held);
+        assert_eq!(claim_name(&mut owners, "A", 3), Claim::TakenBy(1));
+        assert_eq!(claim_name(&mut owners, "B", 4), Claim::TakenBy(2));
+    }
 }
