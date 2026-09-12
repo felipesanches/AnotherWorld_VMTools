@@ -557,27 +557,40 @@ fn encode_video(asm: &mut Asm, instr: &Instruction) {
         }
     }
 
-    // Zoom: if omitted in source, it's 0x40 (default — no extra
-    // bytes, no var-zoom opcode bits set). If present and a
-    // variable, encode via opcode bit 0x01 (or 0x02 for the alt
-    // encoding marked with `;@enc=alt`). If present as the literal
-    // 0x40, behaves identically to omission (kept for cases like
-    // the 92 byte-literal-x-y full-form lines where omission would
-    // be ambiguous with compact form).
+    // Zoom has three encodings, selected by the low two opcode bits:
+    //
+    //   0x00  omitted          the default 0x40, no operand byte
+    //   0x01  `zoom=[0xNN]`    read variable NN at run time
+    //   0x02  `zoom=0xNN`      the literal NN, one operand byte
+    //
+    // The 0x02 form is an IMMEDIATE, not a variable. The disassembler
+    // used to print it as `zoom=[0xNN]` with a `;@enc=alt` tag, which
+    // read as a variable reference and was not one: those operands form
+    // zoom ramps (0x10 = 25%, 0x20 = 50%, 0x40 = 100%), none of the ids
+    // is ever written as a variable, and one of them collided with the
+    // copy-protection token. See archaeology issue #0131.
+    //
+    // The `is_var` + `;@enc=alt` spelling is still accepted so a tree
+    // written before that fix assembles unchanged; it encodes the same
+    // bytes. New output uses the immediate form.
     if let Some(zoom) = ops.get("zoom") {
+        let zv = asm.resolve_or_zero(&zoom.value);
         if zoom.is_var {
-            operand_bytes.push(asm.resolve_or_zero(&zoom.value));
+            operand_bytes.push(zv);
             if instr.enc.as_deref() == Some("alt") {
-                opcode |= 0x02;
+                opcode |= 0x02; // legacy spelling of the immediate form
             } else {
                 opcode |= 0x01;
             }
-        } else {
-            let zv = asm.resolve_or_zero(&zoom.value);
-            if zv != 0x40 {
-                eprintln!("ERROR! Zoom can't be a constant other than 0x40!");
-            }
+        } else if zv != 0x40 || instr.enc.as_deref() == Some("alt") {
+            // A literal other than 0x40 can only be the immediate form.
+            // A literal 0x40 is ambiguous with omission, so it needs the
+            // tag to mean "emit the byte"; no such line exists in the
+            // tree today, but the encoding allows it.
+            operand_bytes.push(zv);
+            opcode |= 0x02;
         }
+        // else: literal 0x40 with no tag — identical to omission.
     }
 
     asm.byte_const(opcode);

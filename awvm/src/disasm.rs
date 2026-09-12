@@ -582,14 +582,22 @@ impl<'v> Disassembler for AwvmDisassembler<'v> {
 fn classify_encoding(text: &str, raw: &[u8]) -> String {
     // Pattern 1: video zoom-as-var with bit-1 instead of bit-0.
     // Opcodes in the 0x40-0x7F range with `(opcode & 0x03) == 2`
-    // decode "zoom = var" via the alt path. Source text always
-    // starts with `video` and contains `zoom=[`.
+    // The `(op & 3) == 2` video form once needed a `;@enc=alt` tag,
+    // because it printed its immediate zoom as `zoom=[0xNN]` and that
+    // was indistinguishable from the `(op & 3) == 1` variable form.
+    // It now prints `zoom=0xNN`, which is unambiguous on its own, so no
+    // tag is emitted. The assembler still accepts the old spelling so a
+    // tree written before #0131 assembles unchanged.
+    //
+    // The one case the text alone cannot separate is an immediate 0x40,
+    // which is identical to omitting zoom. No such line exists in the
+    // tree; if one appears, tag it `;@enc=alt` to mean "emit the byte".
     if !raw.is_empty() {
         let op = raw[0];
         if (0x40..=0x7F).contains(&op)
             && (op & 0x03) == 0x02
             && text.trim_start().starts_with("video")
-            && text.contains("zoom=[")
+            && text.contains("zoom=0x40")
         {
             return format!("{}\t;@enc=alt", text);
         }
@@ -702,8 +710,21 @@ impl<'v> AwvmDisassembler<'v> {
                 if opcode & 1 != 0 {
                     zoom_str = "0x40".to_owned();
                 } else {
+                    // IMMEDIATE zoom, not a variable. This printed
+                    // `[0x{:02x}]` until 2026-09-12 and carried a
+                    // `;@enc=alt` tag to say which encoding produced it.
+                    // The operands say immediate: they form ramps
+                    // (0x10 = 25%, 0x20 = 50%, against a 0x40 default),
+                    // none of the ids is ever written as a variable, and
+                    // one of them is the copy-protection token. See
+                    // archaeology issue #0131.
+                    //
+                    // The bracketed spelling also defeated
+                    // `polygons.rs::parse_int_else`, so every alt-encoded
+                    // draw silently rendered at the 0x40 fallback instead
+                    // of its real zoom.
                     let v = t.fetch();
-                    zoom_str = format!("[0x{:02x}]", v);
+                    zoom_str = format!("0x{:02x}", v);
                 }
             }
 
