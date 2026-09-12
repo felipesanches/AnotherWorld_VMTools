@@ -166,3 +166,36 @@ fn flagged_page_values_are_not_named() {
         );
     }
 }
+
+/// Same invariant as the page table, for the channel and music tables: every value
+/// the resolver names must be one the header defines, or the listing uses a symbol
+/// it never declares and the assembler resolves it to 0 in silence.
+#[test]
+fn channel_and_music_names_used_are_also_defined() {
+    for reg in [&amiga::REGISTRY, &msdos::REGISTRY] {
+        let chans = reg.channel_names_effective();
+        assert!(!chans.is_empty(), "no channel table in effect");
+        for &(v, name) in chans {
+            assert_eq!(reg.channel_name(v), Some(name));
+        }
+        let music = reg.music_names_effective();
+        assert!(!music.is_empty(), "no music table in effect");
+        for &(v, name) in music {
+            assert_eq!(reg.music_name(v), Some(name));
+        }
+    }
+}
+
+/// Only port- and stage-invariant channels may be named. A channel whose role is
+/// per stage must stay a literal, because a channel's role is the union of the roles
+/// of the routines on it and four of nine stages are still mostly placeholders.
+/// 0x01 is the counter-example: 196 setups across 20 files with no single role.
+#[test]
+fn stage_scoped_channels_are_not_named() {
+    for v in [0x01u8, 0x04, 0x07, 0x24, 0x2E] {
+        assert!(
+            amiga::REGISTRY.channel_name(v).is_none(),
+            "0x{v:02X} is stage-scoped and must not carry a port-level name"
+        );
+    }
+}

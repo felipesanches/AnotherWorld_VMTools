@@ -316,6 +316,23 @@ impl<'v> AwvmDisassembler<'v> {
     /// otherwise a hex literal. Only exact values are named — `copyVideoPage src`
     /// carries flag bits on top of a page number, and naming a composite would
     /// claim more than is known (see docs/NAMING.md §6).
+    /// A `setup channel=` operand: the registry's symbol when the channel's role
+    /// is port- and stage-invariant, otherwise a hex literal.
+    fn channel(&self, v: u8) -> String {
+        match self.registry.channel_name(v) {
+            Some(n) => n.to_owned(),
+            None => format!("0x{:02X}", v),
+        }
+    }
+
+    /// A music resource id: symbolic where the track has been identified.
+    fn music(&self, v: u16) -> String {
+        match self.registry.music_name(v) {
+            Some(n) => n.to_owned(),
+            None => format!("0x{:04X}", v),
+        }
+    }
+
     fn page(&self, v: u8) -> String {
         match self.registry.video_page_name(v) {
             Some(n) => n.to_owned(),
@@ -460,6 +477,12 @@ impl<'v> Disassembler for AwvmDisassembler<'v> {
         // change bytes silently rather than fail.
         for (v, name) in self.registry.video_page_names_effective() {
             s.push_str(&format!("{}\t\tEQU 0x{:02X}\n", name, v));
+        }
+        for (v, name) in self.registry.channel_names_effective() {
+            s.push_str(&format!("{}\t\tEQU 0x{:02X}\n", name, v));
+        }
+        for (v, name) in self.registry.music_names_effective() {
+            s.push_str(&format!("{}\t\tEQU 0x{:04X}\n", name, v));
         }
         if let Some(stage) = self.registry.stage(self.game_level) {
             for (var, name) in stage.variable_aliases {
@@ -762,8 +785,8 @@ impl<'v> AwvmDisassembler<'v> {
                 let pc_offset = (u32::from(hi) << 8) | u32::from(lo);
                 t.schedule_entry_point(pc_offset, true);
                 format!(
-                    "setup channel=0x{:02X}, address={}",
-                    thread_id,
+                    "setup channel={}, address={}",
+                    self.channel(thread_id as u8),
                     self.label_name_register(t, pc_offset)
                 )
             }
@@ -959,8 +982,8 @@ impl<'v> AwvmDisassembler<'v> {
                 let delay = (u32::from(dhi) << 8) | u32::from(dlo);
                 let pos = t.fetch();
                 format!(
-                    "song id=0x{:04X}, delay=0x{:04X}, pos=0x{:02X}",
-                    res, delay, pos
+                    "song id={}, delay=0x{:04X}, pos=0x{:02X}",
+                    self.music(res as u16), delay, pos
                 )
             }
             0x1b => "GameOver".to_owned(),

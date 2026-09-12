@@ -362,6 +362,40 @@ fn emit_port_rs(port: &str, root: &Value) -> String {
     }
     s.push_str("];\n\n");
 
+    for (key, cname, ty) in [
+        ("channel_names", "CHANNEL_NAMES", "u8"),
+        ("music_names", "MUSIC_NAMES", "u16"),
+    ] {
+        s.push_str(&format!("static {cname}: &[({ty}, &str)] = &[\n"));
+        if let Some(arr) = root.get(key).and_then(Value::as_array) {
+            let mut rows: Vec<(u32, String)> = arr
+                .iter()
+                .map(|e| {
+                    let p = e.as_array()
+                        .unwrap_or_else(|| panic!("{key} entry must be a pair"));
+                    (
+                        p[0].as_integer()
+                            .unwrap_or_else(|| panic!("{key} value must be an integer"))
+                            as u32,
+                        p[1].as_str()
+                            .unwrap_or_else(|| panic!("{key} name must be a string"))
+                            .to_owned(),
+                    )
+                })
+                .collect();
+            rows.sort_by_key(|(v, _)| *v);
+            for (v, n) in rows {
+                let lit = if ty == "u8" {
+                    format!("0x{:02X}", v)
+                } else {
+                    format!("0x{:04X}", v)
+                };
+                s.push_str(&format!("    ({}, {}),\n", lit, esc_str(&n)));
+            }
+        }
+        s.push_str("];\n\n");
+    }
+
     let parent = root.get("parent").and_then(Value::as_str);
     let parent_expr = match parent {
         Some(p) => format!("Some(&crate::releases::{}::REGISTRY)", p),
@@ -384,6 +418,8 @@ fn emit_port_rs(port: &str, root: &Value) -> String {
          \x20   resource_ids_cinematic: resource_ids::CINEMATIC,\n\
          \x20   resource_ids_video2: resource_ids::VIDEO2,\n\
          \x20   video_page_names: VIDEO_PAGE_NAMES,\n\
+         \x20   channel_names: CHANNEL_NAMES,\n\
+         \x20   music_names: MUSIC_NAMES,\n\
          }};\n",
         esc_str(port),
         esc_str(slug),

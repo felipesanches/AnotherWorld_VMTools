@@ -54,6 +54,16 @@ pub struct PortRegistry {
     /// composite would assert more than the evidence supports. See
     /// `docs/NAMING.md` §6.
     pub video_page_names: &'static [(u8, &'static str)],
+    /// Symbolic names for `setup channel=` operands (plan item T7).
+    ///
+    /// Only channels whose role is the same in every stage and every port belong
+    /// here. Most channels are stage-scoped — the bytecode reuses slots — and a
+    /// channel's role is the union of the roles of the routines scheduled on it, so
+    /// a stage's channels cannot be named before its routines are. See
+    /// `docs/NAMING.md` §4.
+    pub channel_names: &'static [(u8, &'static str)],
+    /// Symbolic names for music resource ids used by `song id=` (plan item T7).
+    pub music_names: &'static [(u16, &'static str)],
 }
 
 /// Per-stage data within a port. Each `pairs`-shaped table is
@@ -163,6 +173,44 @@ impl PortRegistry {
             Some(p) => p.video_page_names_effective(),
             None => &[],
         }
+    }
+
+    /// Channel table in effect: this port's if it has one, else the parent's.
+    pub fn channel_names_effective(&'static self) -> &'static [(u8, &'static str)] {
+        if !self.channel_names.is_empty() {
+            return self.channel_names;
+        }
+        match self.parent {
+            Some(p) => p.channel_names_effective(),
+            None => &[],
+        }
+    }
+
+    /// Music-name table in effect: this port's if it has one, else the parent's.
+    pub fn music_names_effective(&'static self) -> &'static [(u16, &'static str)] {
+        if !self.music_names.is_empty() {
+            return self.music_names;
+        }
+        match self.parent {
+            Some(p) => p.music_names_effective(),
+            None => &[],
+        }
+    }
+
+    /// Name for a `setup channel=` operand, or `None` to emit a literal.
+    pub fn channel_name(&'static self, v: u8) -> Option<&'static str> {
+        self.channel_names_effective()
+            .iter()
+            .find(|&&(a, _)| a == v)
+            .map(|&(_, n)| n)
+    }
+
+    /// Name for a music resource id, or `None` to emit a literal.
+    pub fn music_name(&'static self, v: u16) -> Option<&'static str> {
+        self.music_names_effective()
+            .iter()
+            .find(|&&(a, _)| a == v)
+            .map(|&(_, n)| n)
     }
 
     /// Name for a video-page operand value, or `None` to emit a literal.
@@ -404,6 +452,8 @@ mod tests {
         resource_ids_bytecode: &[],
         resource_ids_screen: &[],
         video_page_names: &[],
+        channel_names: &[],
+        music_names: &[],
         resource_ids_music: &[],
         resource_ids_sample: &[],
         resource_ids_palette: &[],
@@ -445,6 +495,8 @@ mod tests {
         resource_ids_bytecode: &[],
         resource_ids_screen: &[],
         video_page_names: &[],
+        channel_names: &[],
+        music_names: &[],
         resource_ids_music: &[],
         resource_ids_sample: &[],
         resource_ids_palette: &[],

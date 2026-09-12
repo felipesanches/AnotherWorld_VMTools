@@ -54,6 +54,36 @@ video_page_names = [
     [0xFF, "PAGE_WORK"],
 ]
 
+# Channels whose role is the same in every stage and every port. Most channels are
+# NOT: the bytecode reuses slots, and a channel's role is the union of the roles of
+# the routines scheduled on it, so a stage's channels cannot be named before its
+# routines are. Four of nine stages are still mostly placeholder routines.
+# Reproduce with archaeology's tools/operand_inventory.py --layer channel-roles.
+channel_names = [
+    # 433 setups, present in all 9 stages: the busiest channel in the game. In LAKE
+    # (fully named) it carries HERO_STAND_LEFT_LOOP, HERO_JUMP_RISE_PARABOLA,
+    # LESTER_DROP_LAND_AT_POOL_EDGE.
+    [0x14, "CH_HERO_STATE"],
+    # The triple 0x14..0x16 is treated as one unit by the engine:
+    # `deleteChannels first=0x14, last=0x16` is the most common range operation in
+    # the game at 94 sites.
+    [0x15, "CH_HERO_RUN"],
+    [0x16, "CH_HERO_PHYSICS"],
+    # 333 setups, also all 9 stages. The frame-present loop: BLITTER_LOOP_COPY_PAGE_00,
+    # RENDER_FRAME_DISPATCH, LOOP_BLIT_AND_CLEAR_FF.
+    [0x3C, "CH_BLIT"],
+]
+
+# Music resource ids. All three identified at E3 by rendering them to audio and
+# listening — see research/11. 0x89 is the one worth knowing about: a 26.5-second
+# high-anxiety ambient loop that LAKE loads behind a `jmp` and never plays, so it
+# shipped in every release and no player has heard it.
+music_names = [
+    [0x0007, "MUS_INTRO_THEME"],
+    [0x0089, "MUS_LAKE_CUT_AMBIENT"],
+    [0x008A, "MUS_END_CREDITS"],
+]
+
 [resource_ids]
 bytecode = [0x15, 0x18, 0x1B, 0x1E, 0x21, 0x24, 0x27, 0x2A, 0x7E]
 screen = [0x12, 0x13, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x53, 0x90, 0x91]
