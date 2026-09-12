@@ -612,15 +612,24 @@ fn parse_lines(input: &str) -> (HashMap<String, i64>, Vec<(Option<String>, Instr
         let enc_name = parse_enc_marker(src_line);
         let line = src_line.split(';').next().unwrap_or("").trim().to_owned();
 
-        if line.contains("EQU") {
-            if let Some(idx) = line.find("EQU") {
-                let name = line[..idx].trim().to_owned();
-                let value_str = line[idx + 3..].trim();
+        // An EQU definition is exactly `NAME EQU VALUE`: the keyword must be
+        // its own whitespace-delimited token. This used to be a substring test
+        // (`line.contains("EQU")`), which silently swallowed any line whose
+        // first token merely *contained* those three letters — a label named
+        // `..._SEQUENCE:` was parsed as an EQU definition and its label and
+        // instruction were dropped, changing the assembled bytes with no error.
+        // The byte gate caught it only by luck. See archaeology issue #0073;
+        // the root cause is the substring, not the label length.
+        {
+            let mut toks = line.split_whitespace();
+            let name = toks.next();
+            if toks.next() == Some("EQU") {
+                let value_str = toks.next().unwrap_or("");
                 if let OperandValue::Int(v) = parse_value(value_str) {
-                    symbols.insert(name, v);
+                    symbols.insert(name.unwrap_or("").to_owned(), v);
                 }
+                continue;
             }
-            continue;
         }
 
         // Label: a token ending in `:` at the start of the (whitespace-stripped) line.
@@ -756,6 +765,50 @@ mod tests {
         let _ = fs::remove_file(&out);
         let _ = fs::remove_file(out.with_extension("symbols.txt"));
         bytes
+    }
+
+    // #0073: a label whose name merely CONTAINS the letters "EQU" must not be
+    // mistaken for an EQU definition. `..._SEQUENCE:` is the real case that bit
+    // the project: the line was swallowed, the label and its instruction
+    // vanished, and the assembled bytes changed with no diagnostic.
+
+    #[test]
+    fn label_containing_equ_substring_is_not_an_equ_definition() {
+        let with_sequence_label = assemble_string(
+            "\torg 0x0000\n\tjmp BEAST_SURPRISE_FLASH_SEQUENCE\nBEAST_SURPRISE_FLASH_SEQUENCE:\n\tret\n",
+        );
+        // Same program, label renamed so it cannot contain "EQU".
+        let with_plain_label = assemble_string(
+            "\torg 0x0000\n\tjmp BEAST_SURPRISE_FLASH_LOOP\nBEAST_SURPRISE_FLASH_LOOP:\n\tret\n",
+        );
+        assert_eq!(
+            with_sequence_label, with_plain_label,
+            "a label containing the substring EQU assembled differently"
+        );
+        // And the label really is there: jmp + 2-byte target, then ret.
+        assert_eq!(with_sequence_label.len(), 4);
+    }
+
+    #[test]
+    fn equ_keyword_must_be_its_own_token() {
+        // A well-formed definition still works, tabs and all.
+        let via_equ = assemble_string(
+            "CINEMATIC_X\t\tEQU 0x0100\n\torg 0x0000\n\tvideo offset=CINEMATIC_X, x=10, y=20\n",
+        );
+        let via_literal =
+            assemble_string("\torg 0x0000\n\tvideo offset=0x100, x=10, y=20\n");
+        assert_eq!(via_equ, via_literal);
+    }
+
+    #[test]
+    fn equ_named_with_an_equ_substring_still_resolves() {
+        // The name contains "EQU" twice over and is used as an operand.
+        let named = assemble_string(
+            "CINEMATIC_SEQUENCE_EQUIPMENT\t\tEQU 0x0100\n\torg 0x0000\n\tvideo offset=CINEMATIC_SEQUENCE_EQUIPMENT, x=10, y=20\n",
+        );
+        let literal =
+            assemble_string("\torg 0x0000\n\tvideo offset=0x100, x=10, y=20\n");
+        assert_eq!(named, literal);
     }
 
     // Default-omission round-trip tests for the `video` instruction
