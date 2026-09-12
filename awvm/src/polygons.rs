@@ -201,11 +201,23 @@ impl PolygonDecoder {
 
     fn fetch_polygon_data(&mut self) -> u8 {
         let idx = ((self.game_level as usize) << 16) | (self.pdata_offset as usize);
-        let v = self
-            .polygon_data
-            .get(idx)
-            .copied()
-            .expect("pdata_offset out of bounds");
+        let v = self.polygon_data.get(idx).copied().unwrap_or_else(|| {
+            // Almost always a short polygon ROM rather than a bad offset: the
+            // index is `(level << 16) | offset`, so one missing 64 KiB slab puts
+            // every read for the last level past the end. Say which, because
+            // "pdata_offset out of bounds" sent people looking at the offset
+            // (archaeology #0097).
+            panic!(
+                "polygon data out of bounds: level {} offset 0x{:04X} needs byte \
+                 {} of a {}-byte polygon ROM ({} slab(s) of 64 KiB). Check that \
+                 resource_ids.cinematic lists one slab per bytecode slab.",
+                self.game_level,
+                self.pdata_offset,
+                idx,
+                self.polygon_data.len(),
+                self.polygon_data.len() / 0x10000,
+            )
+        });
         self.pdata_offset = self.pdata_offset.wrapping_add(1);
         v
     }

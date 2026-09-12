@@ -40,6 +40,23 @@ pub fn generate(
         ids.bytecode,
         0x10000,
     )?;
+    // One 64 KiB cinematic slab per bytecode slab: the polygon fetcher indexes
+    // cinematic.rom as `(level << 16) | offset`, so a short list silently makes
+    // the last level's polygon data run off the end of the buffer. amiga.toml
+    // listed 8 cinematic ids for 9 bytecode ids and `awvm-disasm … all_levels
+    // amiga` panicked after writing every level (archaeology #0097).
+    if ids.cinematic.len() != ids.bytecode.len() {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            format!(
+                "resource_ids: {} bytecode slab(s) but {} cinematic slab(s); \
+                 the polygon fetcher indexes cinematic.rom by level, so these \
+                 must match (archaeology #0097)",
+                ids.bytecode.len(),
+                ids.cinematic.len()
+            ),
+        ));
+    }
     write_padded(
         &romset_dir.join("cinematic.rom"),
         input_dir,
