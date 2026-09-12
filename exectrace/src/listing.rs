@@ -70,8 +70,12 @@ pub(crate) fn write(
             }
 
             let mut indent = if tracer.labeled_addresses.contains(&codeblock.start) {
+                // Prose above the label, if the disassembler has any for this
+                // address. Comment-only, so it cannot move a byte.
+                let prologue = dis.label_prologue(codeblock.start).unwrap_or_default();
                 format!(
-                    "\n{}:\n\t",
+                    "\n{}{}:\n\t",
+                    prologue,
                     tracer.label_name_for(dis, codeblock.start, "LABEL_")
                 )
             } else {

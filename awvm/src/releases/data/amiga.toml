@@ -585,6 +585,27 @@ possibly_unused_codeblocks = []
 
 [[stages]]
 idx = 2
+prologue = [
+  "STAGE LAKE: the first playable scene of the game, not a later area.",
+  "",
+  "Lester's accelerator experiment has just misfired and dropped him into an",
+  "alien pool. The player has seconds to swim up before he drowns, then a",
+  "tentacled creature rises from the depths. Routines named DROPLET_*,",
+  "TENTACLE_* and SNEAKY_TENTACLE belong to this opening, which is tense by",
+  "design - names here should read that way.",
+  "",
+  "Prose lives in amiga.toml because amiga is the canonical port: every sibling",
+  "inherits it through the translation cohorts rather than repeating it.",
+]
+comments = [
+  [0x34AA, [
+    "The beetle's kick detector, scheduled on channel 0x2E and overwritten on the",
+    "very next instruction - so it never runs. This is the cut beetle-kick",
+    "mechanic (research finding 05, BEETLE_KICK_GATE_1), confirmed in MAME by",
+    "re-enabling it: the beetle becomes kickable. Intentional pre-shipping cut,",
+    "present in every release.",
+  ]],
+]
 labels = [
     [0x0000, "ENTRY_POINT_OF_LAKE"],
     [0x0057, "INIT_AUDIO_AND_SCENE_AFTER_LOADS"],

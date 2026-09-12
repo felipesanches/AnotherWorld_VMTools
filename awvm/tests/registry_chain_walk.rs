@@ -83,3 +83,47 @@ fn msdos_chain_walks_to_amiga() {
         "no labels resolved at all — registry is empty?"
     );
 }
+
+/// #0099: prose written once on the canonical port must reach a sibling through
+/// the same translation cohorts that carry label names. That is the entire
+/// argument for a canonical registry — a description of the drowning scene should
+/// not be written five times — so it is worth a test rather than a one-off check.
+#[test]
+fn comments_chain_walk_from_canonical_to_sibling() {
+    // amiga LAKE carries the prose; amiga is canonical, so this is a local hit.
+    let from_canonical = amiga::REGISTRY.resolve_comment(2, 0x34AA);
+    assert!(
+        from_canonical.is_some(),
+        "amiga LAKE should carry prose at 0x34AA (BEETLE_KICK_DETECTOR)"
+    );
+
+    // The stage prologue resolves on the canonical port and must also resolve on
+    // the sibling, which has none of its own.
+    let canon_prologue = amiga::REGISTRY.resolve_prologue(2);
+    assert!(canon_prologue.is_some(), "amiga LAKE should carry a prologue");
+    let sibling_prologue = msdos::REGISTRY.resolve_prologue(2);
+    assert_eq!(
+        canon_prologue.map(|p| p.len()),
+        sibling_prologue.map(|p| p.len()),
+        "msdos should inherit amiga's LAKE prologue, not have its own"
+    );
+
+    // And msdos's own stage block must NOT define it locally, or the test above
+    // would pass for the wrong reason.
+    let stage = msdos::REGISTRY.stage(2).expect("msdos LAKE stage exists");
+    assert!(
+        stage.prologue.is_none(),
+        "msdos LAKE defines a local prologue; this test no longer proves inheritance"
+    );
+}
+
+/// A comment on an address no cohort maps anywhere must resolve to nothing rather
+/// than to some unrelated routine's prose. The cohort tables are binary-searched
+/// and fall through to implicit identity outside any cohort, so this is the case
+/// where a wrong answer would be quiet.
+#[test]
+fn comments_do_not_resolve_for_an_unmapped_address() {
+    // 0xFFFE is past the end of any real bytecode slab.
+    assert!(msdos::REGISTRY.resolve_comment(2, 0xFFFE).is_none());
+    assert!(amiga::REGISTRY.resolve_comment(2, 0xFFFE).is_none());
+}

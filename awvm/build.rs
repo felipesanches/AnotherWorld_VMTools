@@ -238,6 +238,34 @@ fn emit_port_rs(port: &str, root: &Value) -> String {
                 port_upper, stage.idx
             ));
         }
+        if let Some(lines) = &stage.prologue {
+            s.push_str(&format!(
+                "static {}_STAGE_{}_PROLOGUE: &[&str] = &[\n", port_upper, stage.idx));
+            for l in lines {
+                s.push_str(&format!("    {},\n", esc_str(l)));
+            }
+            s.push_str("];\n");
+        }
+        if let Some(entries) = &stage.comments {
+            for (addr, lines) in entries {
+                s.push_str(&format!(
+                    "static {}_STAGE_{}_C_{:04X}: &[&str] = &[\n",
+                    port_upper, stage.idx, addr));
+                for l in lines {
+                    s.push_str(&format!("    {},\n", esc_str(l)));
+                }
+                s.push_str("];\n");
+            }
+            s.push_str(&format!(
+                "static {}_STAGE_{}_COMMENTS: &[(u32, &[&str])] = &[\n",
+                port_upper, stage.idx));
+            for (addr, _) in entries {
+                s.push_str(&format!(
+                    "    (0x{:04X}, {}_STAGE_{}_C_{:04X}),\n",
+                    addr, port_upper, stage.idx, addr));
+            }
+            s.push_str("];\n");
+        }
         if let Some(cohorts) = &stage.translation_to_parent {
             emit_cohorts_const(&mut s, &port_upper, stage.idx, "COHORTS", cohorts);
         }
@@ -281,14 +309,28 @@ fn emit_port_rs(port: &str, root: &Value) -> String {
         } else {
             "&[]".to_owned()
         };
+        let prologue_ref = if stage.prologue.is_some() {
+            format!("Some({}_STAGE_{}_PROLOGUE)", port_upper, stage.idx)
+        } else {
+            "None".to_owned()
+        };
+        let comments_ref = if stage.comments.is_some() {
+            format!("{}_STAGE_{}_COMMENTS", port_upper, stage.idx)
+        } else {
+            "&[]".to_owned()
+        };
+        let parent_idx_ref = match stage.parent_stage_idx {
+            Some(v) => format!("Some({})", v),
+            None => "None".to_owned(),
+        };
         s.push_str(&format!(
             "    crate::registry::StageRegistry {{\n\
              \x20       stage_idx: {idx},\n\
-             \x20       parent_stage_idx: None,\n\
+             \x20       parent_stage_idx: {parent_idx_ref},\n\
              \x20       stage_title: None,\n\
-             \x20       prologue: None,\n\
+             \x20       prologue: {prologue_ref},\n\
              \x20       labels: {labels_ref},\n\
-             \x20       comments: &[],\n\
+             \x20       comments: {comments_ref},\n\
              \x20       cinematic_entries: {cin_ref},\n\
              \x20       possibly_unused_codeblocks: {unused_ref},\n\
              \x20       variable_aliases: {aliases_ref},\n\
@@ -333,6 +375,12 @@ fn emit_port_rs(port: &str, root: &Value) -> String {
 #[derive(Default)]
 struct StageData {
     idx: u32,
+    /// Stage-level prose, emitted once at the top of the listing (#0099).
+    prologue: Option<Vec<String>>,
+    /// Per-routine prose, emitted immediately above the label (#0099).
+    comments: Option<Vec<(u32, Vec<String>)>>,
+    /// Parent stage this one translates into, when the numbering differs.
+    parent_stage_idx: Option<u32>,
     labels: Option<Vec<(u32, String)>>,
     cinematic_entries: Option<Vec<(u32, String)>>,
     possibly_unused_codeblocks: Option<Vec<u32>>,
@@ -391,6 +439,31 @@ fn collect_stages(root: &Value) -> Vec<StageData> {
                     })
                     .collect(),
             );
+        }
+        if let Some(v) = t.get("parent_stage_idx").and_then(Value::as_integer) {
+            s.parent_stage_idx = Some(v as u32);
+        }
+        if let Some(arr) = t.get("prologue").and_then(Value::as_array) {
+            s.prologue = Some(
+                arr.iter().filter_map(Value::as_str).map(str::to_owned).collect());
+        }
+        // comments = [[addr, ["line", "line"]], ...]
+        if let Some(arr) = t.get("comments").and_then(Value::as_array) {
+            let mut out = Vec::new();
+            for e in arr {
+                let pair = match e.as_array() {
+                    Some(p) if p.len() == 2 => p,
+                    _ => panic!("comments entry must be [addr, [lines]]"),
+                };
+                let addr = pair[0].as_integer()
+                    .expect("comments addr must be an integer") as u32;
+                let lines: Vec<String> = pair[1].as_array()
+                    .expect("comments lines must be an array")
+                    .iter().filter_map(Value::as_str).map(str::to_owned).collect();
+                out.push((addr, lines));
+            }
+            out.sort_by_key(|(a, _)| *a);
+            s.comments = Some(out);
         }
         if let Some(cohorts) = t.get("translation_to_parent").and_then(Value::as_array) {
             s.translation_to_parent = Some(parse_cohorts(cohorts));

@@ -103,6 +103,19 @@ pub trait Disassembler {
     fn label_name(&self, _tracer: &Tracer, _addr: u32) -> Option<String> {
         None
     }
+
+    /// Prose to emit immediately above a label, already comment-prefixed and
+    /// newline-terminated. Default is nothing.
+    ///
+    /// This exists as its own hook rather than being folded into
+    /// [`Disassembler::label_name`] because that function's return value is also
+    /// used as operand text — `call NAME`, `setup … address=NAME` — and feeds the
+    /// `.symbols.txt` sidecar. Returning prose from it would corrupt both. The
+    /// listing emitter therefore asks separately, and only where a label is
+    /// actually declared.
+    fn label_prologue(&self, _addr: u32) -> Option<String> {
+        None
+    }
 }
 
 /// The crawl state.
