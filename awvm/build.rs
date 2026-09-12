@@ -417,11 +417,44 @@ fn parse_addr_name_pair(v: &Value) -> (u32, String) {
 
 fn emit_cohorts_const(s: &mut String, port_upper: &str, stage_idx: u32,
                        suffix: &str, cohorts: &[CohortData]) {
+    // `registry::translate_addr` binary-searches this table, which is only
+    // meaningful if the ranges are sorted and disjoint. Overlapping ranges made
+    // address resolution *undefined* rather than merely first-match, which is
+    // how two msdos addresses came to share one label name and silently
+    // corrupt bytes (archaeology #0118). Sort here, and refuse to build on an
+    // overlap or an empty/inverted range rather than emit a table whose lookups
+    // cannot be reasoned about.
+    let mut sorted: Vec<&CohortData> = cohorts.iter().collect();
+    sorted.sort_by_key(|c| (c.start, c.end));
+    for w in sorted.windows(2) {
+        let (a, b) = (w[0], w[1]);
+        if b.start < a.end {
+            panic!(
+                "{}.toml stage {} {}: cohorts overlap — \
+                 [0x{:04X},0x{:04X}) and [0x{:04X},0x{:04X}). \
+                 translate_addr binary-searches this table, so an overlap makes \
+                 resolution undefined. Split or trim the ranges so they are \
+                 disjoint (archaeology #0118).",
+                port_upper.to_lowercase(), stage_idx, suffix,
+                a.start, a.end, b.start, b.end,
+            );
+        }
+    }
+    for c in &sorted {
+        if c.end <= c.start {
+            panic!(
+                "{}.toml stage {} {}: empty or inverted cohort \
+                 [0x{:04X},0x{:04X}) — end must be greater than start.",
+                port_upper.to_lowercase(), stage_idx, suffix, c.start, c.end,
+            );
+        }
+    }
+
     s.push_str(&format!(
         "static {}_STAGE_{}_{}: &[crate::registry::TranslationCohort] = &[\n",
         port_upper, stage_idx, suffix
     ));
-    for c in cohorts {
+    for c in sorted {
         let kind_expr = match c.kind.as_str() {
             "shift" => format!("crate::registry::CohortKind::Shift({})", c.delta),
             "no_parent" => "crate::registry::CohortKind::NoParent".to_owned(),
