@@ -88,6 +88,10 @@ pub struct StageRegistry {
     pub cinematic_entries: &'static [(u32, &'static str)],
     pub possibly_unused_codeblocks: &'static [u32],
     pub variable_aliases: &'static [(u8, &'static str)],
+    /// Names for `setPalette` slots. **Stage-scoped**, unlike channels, pages and
+    /// music: there is one palette resource per stage, so slot 0x03 is a different
+    /// set of colours in LAKE and in TANK. See `docs/NAMING.md` §8.
+    pub palette_names: &'static [(u8, &'static str)],
     /// Cohort table for translating sibling byte addresses to
     /// parent byte addresses. Phase 2 populates from the
     /// archaeology-side `data/port_registries/<port>.toml`.
@@ -173,6 +177,45 @@ impl PortRegistry {
             Some(p) => p.video_page_names_effective(),
             None => &[],
         }
+    }
+
+    /// Name for a `setPalette` slot in this stage, chain-walking to the parent so a
+    /// sibling inherits canonical's names for a stage they share.
+    pub fn palette_name(
+        &'static self,
+        stage_idx: u32,
+        slot: u8,
+    ) -> Option<&'static str> {
+        let stage = self.stage(stage_idx)?;
+        if let Some(&(_, n)) = stage.palette_names.iter().find(|&&(s, _)| s == slot) {
+            return Some(n);
+        }
+        let parent = self.parent?;
+        parent.palette_name(stage.parent_stage_idx.unwrap_or(stage_idx), slot)
+    }
+
+    /// Every palette name in effect for a stage, so the emitter can define exactly
+    /// the symbols it will use. Local names win over inherited ones.
+    pub fn palette_names_effective(
+        &'static self,
+        stage_idx: u32,
+    ) -> Vec<(u8, &'static str)> {
+        let mut out: Vec<(u8, &'static str)> = Vec::new();
+        let mut reg = Some(self);
+        let mut idx = stage_idx;
+        while let Some(r) = reg {
+            if let Some(stage) = r.stage(idx) {
+                for &(s, n) in stage.palette_names {
+                    if !out.iter().any(|&(e, _)| e == s) {
+                        out.push((s, n));
+                    }
+                }
+                idx = stage.parent_stage_idx.unwrap_or(idx);
+            }
+            reg = r.parent;
+        }
+        out.sort_by_key(|&(s, _)| s);
+        out
     }
 
     /// Channel table in effect: this port's if it has one, else the parent's.
@@ -437,6 +480,7 @@ mod tests {
             cinematic_entries: EMPTY_CINEMATIC,
             possibly_unused_codeblocks: EMPTY_CODEBLOCKS,
             variable_aliases: EMPTY_VAR_ALIASES,
+            palette_names: &[],
             translation_to_parent: EMPTY_COHORTS,
             cinematic_translation_to_parent: EMPTY_COHORTS,
         },
@@ -480,6 +524,7 @@ mod tests {
             cinematic_entries: EMPTY_CINEMATIC,
             possibly_unused_codeblocks: EMPTY_CODEBLOCKS,
             variable_aliases: EMPTY_VAR_ALIASES,
+            palette_names: &[],
             translation_to_parent: MSDOS_STAGE_2_COHORTS,
             cinematic_translation_to_parent: EMPTY_COHORTS,
         },

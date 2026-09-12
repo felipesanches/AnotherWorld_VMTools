@@ -640,6 +640,20 @@ possibly_unused_codeblocks = []
 
 [[stages]]
 idx = 2
+# Palette slots are stage-scoped: there is one palette resource per stage, so slot
+# 0x03 is a different set of colours in LAKE than in TANK. Named only where two
+# independent lines of evidence agree -- which routines select the slot, and what
+# colours the slot actually holds (tools/palette_usage_report.py plus the swatches).
+palette_names = [
+    # 15 of 16 colours are blue, from navy #000030 through cyan #00fcfc, and the
+    # routines that select it are DRAW_INSIDE_ALIEN_POOL_SCENARIO and the
+    # console-underwater-explosion scene.
+    [0x03, "PAL_LAKE_UNDERWATER"],
+    # Sky blue plus earth browns (#883000, #b85400, #dc9888). Selected by
+    # OUTSIDE_POOL_SCREEN, THIRD_SCREEN_TO_THE_RIGHT and THE_BEAST_KILLS_LESTER --
+    # the outdoor screens after Lester climbs out.
+    [0x07, "PAL_LAKE_OUTDOOR"],
+]
 prologue = [
   "STAGE LAKE: the first playable scene of the game, not a later area.",
   "",

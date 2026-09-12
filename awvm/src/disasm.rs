@@ -318,6 +318,15 @@ impl<'v> AwvmDisassembler<'v> {
     /// claim more than is known (see docs/NAMING.md §6).
     /// A `setup channel=` operand: the registry's symbol when the channel's role
     /// is port- and stage-invariant, otherwise a hex literal.
+    /// A `setPalette` slot: symbolic where the scene is identified. Stage-scoped,
+    /// because there is one palette resource per stage.
+    fn palette_slot(&self, v: u8) -> String {
+        match self.registry.palette_name(self.game_level, v) {
+            Some(n) => n.to_owned(),
+            None => format!("0x{:02X}", v),
+        }
+    }
+
     fn channel(&self, v: u8) -> String {
         match self.registry.channel_name(v) {
             Some(n) => n.to_owned(),
@@ -483,6 +492,9 @@ impl<'v> Disassembler for AwvmDisassembler<'v> {
         }
         for (v, name) in self.registry.music_names_effective() {
             s.push_str(&format!("{}\t\tEQU 0x{:04X}\n", name, v));
+        }
+        for (slot, name) in self.registry.palette_names_effective(self.game_level) {
+            s.push_str(&format!("{}\t\tEQU 0x{:02X}\n", name, slot));
         }
         if let Some(stage) = self.registry.stage(self.game_level) {
             for (var, name) in stage.variable_aliases {
@@ -851,7 +863,7 @@ impl<'v> AwvmDisassembler<'v> {
                 let palette_id = t.fetch();
                 let _ = t.fetch(); // waste byte
                 self.current_palette_number = palette_id;
-                format!("setPalette 0x{:02X}", palette_id)
+                format!("setPalette {}", self.palette_slot(palette_id as u8))
             }
             0x0c => {
                 let first = t.fetch();

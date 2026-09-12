@@ -199,3 +199,35 @@ fn stage_scoped_channels_are_not_named() {
         );
     }
 }
+
+/// Palette names are STAGE-scoped, unlike channels, pages and music. There is one
+/// palette resource per stage, so slot 0x03 is a different set of colours in LAKE
+/// than in TANK, and a name must not leak between them. Easy to get wrong, because
+/// every other table in this registry is port-level.
+#[test]
+fn palette_names_are_stage_scoped_and_inherited() {
+    // LAKE is stage 2 on both ports. amiga owns the names; msdos inherits them.
+    assert_eq!(
+        amiga::REGISTRY.palette_name(2, 0x03),
+        Some("PAL_LAKE_UNDERWATER")
+    );
+    assert_eq!(
+        msdos::REGISTRY.palette_name(2, 0x03),
+        Some("PAL_LAKE_UNDERWATER"),
+        "msdos should inherit LAKE's palette names through the chain"
+    );
+    // The same slot in another stage is a different palette entirely.
+    assert!(
+        amiga::REGISTRY.palette_name(5, 0x03).is_none(),
+        "a LAKE palette name must not leak into TANK"
+    );
+    assert!(msdos::REGISTRY.palette_name(5, 0x03).is_none());
+
+    // And the effective list the emitter defines matches what it will use.
+    let eff = msdos::REGISTRY.palette_names_effective(2);
+    assert!(!eff.is_empty());
+    for (slot, name) in eff {
+        assert_eq!(msdos::REGISTRY.palette_name(2, slot), Some(name));
+    }
+    assert!(msdos::REGISTRY.palette_names_effective(5).is_empty());
+}

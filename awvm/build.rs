@@ -238,6 +238,15 @@ fn emit_port_rs(port: &str, root: &Value) -> String {
                 port_upper, stage.idx
             ));
         }
+        if let Some(rows) = &stage.palette_names {
+            s.push_str(&format!(
+                "static {}_STAGE_{}_PALETTE_NAMES: &[(u8, &str)] = &[\n",
+                port_upper, stage.idx));
+            for (slot, n) in rows {
+                s.push_str(&format!("    (0x{:02X}, {}),\n", slot, esc_str(n)));
+            }
+            s.push_str("];\n");
+        }
         if let Some(lines) = &stage.prologue {
             s.push_str(&format!(
                 "static {}_STAGE_{}_PROLOGUE: &[&str] = &[\n", port_upper, stage.idx));
@@ -319,6 +328,11 @@ fn emit_port_rs(port: &str, root: &Value) -> String {
         } else {
             "&[]".to_owned()
         };
+        let palette_names_ref = if stage.palette_names.is_some() {
+            format!("{}_STAGE_{}_PALETTE_NAMES", port_upper, stage.idx)
+        } else {
+            "&[]".to_owned()
+        };
         let parent_idx_ref = match stage.parent_stage_idx {
             Some(v) => format!("Some({})", v),
             None => "None".to_owned(),
@@ -334,6 +348,7 @@ fn emit_port_rs(port: &str, root: &Value) -> String {
              \x20       cinematic_entries: {cin_ref},\n\
              \x20       possibly_unused_codeblocks: {unused_ref},\n\
              \x20       variable_aliases: {aliases_ref},\n\
+             \x20       palette_names: {palette_names_ref},\n\
              \x20       translation_to_parent: {cohorts_ref},\n\
              \x20       cinematic_translation_to_parent: {cin_cohorts_ref},\n\
              \x20   }},\n",
@@ -432,6 +447,8 @@ fn emit_port_rs(port: &str, root: &Value) -> String {
 #[derive(Default)]
 struct StageData {
     idx: u32,
+    /// Stage-scoped `setPalette` slot names (T7).
+    palette_names: Option<Vec<(u8, String)>>,
     /// Stage-level prose, emitted once at the top of the listing (#0099).
     prologue: Option<Vec<String>>,
     /// Per-routine prose, emitted immediately above the label (#0099).
@@ -496,6 +513,20 @@ fn collect_stages(root: &Value) -> Vec<StageData> {
                     })
                     .collect(),
             );
+        }
+        if let Some(arr) = t.get("palette_names").and_then(Value::as_array) {
+            let mut rows: Vec<(u8, String)> = arr
+                .iter()
+                .map(|e| {
+                    let p = e.as_array().expect("palette_names entry must be a pair");
+                    (
+                        p[0].as_integer().expect("slot must be an integer") as u8,
+                        p[1].as_str().expect("name must be a string").to_owned(),
+                    )
+                })
+                .collect();
+            rows.sort_by_key(|(s, _)| *s);
+            s.palette_names = Some(rows);
         }
         if let Some(v) = t.get("parent_stage_idx").and_then(Value::as_integer) {
             s.parent_stage_idx = Some(v as u32);
